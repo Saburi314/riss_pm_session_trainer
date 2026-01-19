@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: riss_app
+    working_dir: /var/www/html
+    volumes:
+      - ../backend:/var/www/html
+      - ./php/conf.d/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+    depends_on:
+      - mysql
+    command: >
+      sh -lc "php artisan serve --host=0.0.0.0 --port=8000"  
+
+  mysql:
+    image: mysql:8.0
+    container_name: riss_mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: riss
+      MYSQL_USER: riss
+      MYSQL_PASSWORD: riss
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Tokyo
+    volumes:
+      - riss_mysql_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: riss_phpmyadmin
+    depends_on:
+      - mysql
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: root
+      TZ: Asia/Tokyo
+
+volumes:
+  riss_mysql_data:
