@@ -186,11 +186,19 @@
     }
 
     .blank-marker {
-      font-size: 1.25em;
-      font-weight: 900;
-      color: #2d3748;
+      font-size: 1.1em;
+      font-weight: 700;
       display: inline-block;
-      margin: 0 2px;
+      margin: 0 4px;
+    }
+
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3 {
+      margin-top: 1.5em;
+      margin-bottom: 1em;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.5em;
     }
   </style>
 </head>
@@ -240,6 +248,7 @@
         <span style="background: #4a90e2; width: 8px; height: 24px; border-radius: 4px; margin-right: 12px;"></span>
         演習問題
       </h2>
+      <div id="exercise-content" class="markdown-body"></div>
     </div>
 
     <div class="card">
@@ -362,6 +371,81 @@
       answerArea.addEventListener('input', refreshCharacterCounter);
       refreshCharacterCounter();
     }
+
+    // AIの書き漏らしを補完するセーフティネット
+    function robustPreprocess(text) {
+      if (!text) return '';
+      // ヘッダー直後に改行がない場合の補完（空行を確保して見やすくする）
+      text = text.replace(/(【問題文】|【設問】)([^\s\n])/g, '$1\n\n$2');
+
+      let lines = text.split('\n');
+      let result = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        let trimmed = line.trim();
+
+        // テーブル行のクリーニング
+        if (trimmed.startsWith('|')) {
+          const content = trimmed.replace(/[\||\s|.|-]/g, '');
+          if (content === '' && !trimmed.includes('---|') && !trimmed.includes('---')) {
+            continue;
+          }
+        }
+
+
+        result.push(line);
+      }
+      return result.join('\n');
+    }
+
+    // コンテンツの表示初期化
+    function initializeDisplay() {
+      const exerciseRaw = @json($exerciseText ?? '');
+      const scoringRaw = @json($scoringResult ?? '');
+
+      const exerciseContent = document.getElementById('exercise-content');
+      const scoringContent = document.getElementById('scoring-content');
+
+      if (exerciseContent && exerciseRaw) {
+        // カスタムレンダラー（Mermaid対応）
+        const renderer = new marked.Renderer();
+        // Marked v4+ の引数仕様に合わせる
+        renderer.code = function (args) {
+          const text = typeof args === 'string' ? args : args.text;
+          const language = typeof args === 'string' ? arguments[1] : args.lang;
+
+          if (language === 'mermaid') {
+            return `<div class="mermaid">${text}</div>`;
+          }
+          return `<pre><code class="language-${language}">${text}</code></pre>`;
+        };
+
+        // セーフティネットを通してパース
+        const robustText = robustPreprocess(exerciseRaw);
+        // [a] の強調（太字があってもなくても対応）
+        const highlighted = robustText.replace(/(\*\*)?［\s*([a-z])\s*］(\*\*)?/g, '<span class="blank-marker">［ $2 ］</span>');
+        exerciseContent.innerHTML = marked.parse(highlighted, {
+          renderer: renderer,
+          breaks: true // GFM-like line breaks
+        });
+      }
+
+      if (scoringContent && scoringRaw) {
+        scoringContent.innerHTML = marked.parse(scoringRaw, { breaks: true });
+      }
+
+      // Mermaid図の描画
+      if (typeof mermaid !== 'undefined') {
+        setTimeout(() => {
+          mermaid.run({
+            querySelector: '.mermaid'
+          }).catch(err => console.error('Mermaid error:', err));
+        }, 100);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeDisplay);
   </script>
 </body>
 
