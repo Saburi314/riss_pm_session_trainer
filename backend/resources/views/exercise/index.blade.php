@@ -353,8 +353,8 @@
 
       matches.forEach((m, i) => {
         const num = m[1];
-        // 設問4のみ文字数をカウント
-        if (num === '4') {
+        // 設問1, 3, 4, 5の文字数をカウント
+        if (['1', '3', '4', '5'].includes(num)) {
           const start = m.index + m[0].length;
           const end = matches[i + 1] ? matches[i + 1].index : val.length;
           const len = val.substring(start, end).trim().length;
