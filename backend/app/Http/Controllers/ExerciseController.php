@@ -20,6 +20,7 @@ class ExerciseController extends Controller
         $category = $request->input('category');
         $subcategory = $request->input('subcategory');
 
+
         $prompt = $promptService->buildGeneratePrompt($category, $subcategory);
 
         $exerciseText = $exerciseService->generateExercise($prompt);

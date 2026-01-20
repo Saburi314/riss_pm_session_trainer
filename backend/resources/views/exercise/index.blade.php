@@ -59,8 +59,8 @@
         </div>
         <div style="flex: 1;">
           <label class="score-label">Subcategory</label>
-          <select name="subcategory" id="subcategory" style="width: 100%;">
-            <option value="">（最初にCategoryを選択してください）</option>
+          <select name="subcategory" id="subcategory" style="width: 100%;" disabled>
+            <option value="" selected disabled>選択不要</option>
           </select>
         </div>
         <button type="submit">問題を生成する</button>

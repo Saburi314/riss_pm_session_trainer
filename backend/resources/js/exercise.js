@@ -4,10 +4,8 @@ mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose
 window.mermaid = mermaid;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Data & Config ---
     const { categories, currentSubcategory } = window.RissApp || {};
 
-    // --- DOM Elements ---
     const categorySelect = document.getElementById('category');
     const subcategorySelect = document.getElementById('subcategory');
     const generateForm = document.getElementById('form-generate');
@@ -19,23 +17,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const timerCount = document.getElementById('timer-count');
     const triviaText = document.getElementById('trivia-text');
 
-    // --- State & Timers ---
     let timerInterval = null;
     let triviaInterval = null;
     let seconds = 0;
+    let triviaList = [];
+    let currentTriviaIndex = 0;
 
-    // --- Utility Functions ---
 
     /**
      * ローディング画面を開始する
      * @param {string} mode - 'generate' | 'score'
      */
-    function startLoading(mode) {
+    async function startLoading(mode) {
         if (!loadingOverlay) return;
+
+        triviaList = [];
+        currentTriviaIndex = 0;
+        if (triviaText) triviaText.textContent = "セキュリティ豆知識を読み込み中...";
 
         loadingOverlay.style.display = 'flex';
         seconds = 0;
         if (timerCount) timerCount.textContent = '0';
+
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            seconds++;
+            if (timerCount) timerCount.textContent = seconds;
+        }, 2000);
+
+        const category = categorySelect ? categorySelect.value : '';
+        await fetchTriviaList(category);
+
+        showNextTrivia();
 
         // Mode specific settings
         if (mode === 'generate') {
@@ -49,15 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loadingStatus) loadingStatus.textContent = "お待ちください...";
         }
 
-        // Timer
-        timerInterval = setInterval(() => {
-            seconds++;
-            if (timerCount) timerCount.textContent = seconds;
-        }, 1000);
-
-        // Trivia
-        updateTrivia();
-        triviaInterval = setInterval(updateTrivia, 8000); // 8秒ごとにトリビアを更新
+        if (triviaInterval) clearInterval(triviaInterval);
+        triviaInterval = setInterval(showNextTrivia, 8000);
     }
 
     function stopLoading() {
@@ -67,34 +73,38 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(triviaInterval);
     }
 
-    async function updateTrivia() {
-        if (!triviaText) return;
-
-        const category = categorySelect ? categorySelect.value : '';
-
+    async function fetchTriviaList(category) {
         try {
             const params = new URLSearchParams();
             if (category) params.append('category', category);
 
-            const response = await fetch(`/api/trivia/random?${params.toString()}`);
+            const url = `/api/trivia/random-list?${params.toString()}`;
+            const response = await fetch(url);
             if (response.ok) {
-                const data = await response.json();
-                if (data && data.content) {
-                    triviaText.textContent = data.content;
-                }
+                triviaList = await response.json();
             }
         } catch (e) {
-            console.error('Trivia fetch failed', e);
+            console.error('Trivia list fetch error:', e);
+            triviaList = [];
         }
     }
 
+    function showNextTrivia() {
+        if (!triviaText) return;
 
-    // --- Form Handlers ---
+        if (triviaList && triviaList.length > 0) {
+            const item = triviaList[currentTriviaIndex];
+            triviaText.textContent = item.content || "セキュリティ意識を高めましょう。";
+            currentTriviaIndex = (currentTriviaIndex + 1) % triviaList.length;
+        } else {
+            triviaText.textContent = "セキュリティ豆知識をご案内します。しばらくお待ちください。";
+        }
+    }
 
     if (generateForm) {
         generateForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            startLoading('generate');
+            await startLoading('generate');
 
             try {
                 const formData = new FormData(generateForm);
@@ -103,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json',
-                        // CSRF is handled by valid input[type=hidden] in form or meta tag
                     },
                     body: formData
                 });
@@ -111,8 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) throw new Error('Network response was not ok');
 
                 const data = await response.json();
-
-                // Render Exercise
                 renderExerciseResult(data);
 
             } catch (error) {
@@ -125,10 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (scoreForm) {
-        // Since score form might be dynamically shown or updated, use delegation or direct check
         scoreForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            startLoading('score');
+            await startLoading('score');
 
             try {
                 const formData = new FormData(scoreForm);
@@ -144,8 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) throw new Error('Network response was not ok');
 
                 const data = await response.json();
-
-                // Render Score
                 renderScoreResult(data);
 
             } catch (error) {
@@ -157,19 +161,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Rendering Logic ---
 
     function renderExerciseResult(data) {
-        // Exercise Text
         const contentDiv = document.getElementById('exercise-content');
         if (contentDiv) {
             contentDiv.innerHTML = parseMarkdown(data.exerciseText);
-            // Ensure container is visible (if hidden initially)
             const exerciseCard = document.getElementById('exercise-card');
             if (exerciseCard) exerciseCard.style.display = 'block';
         }
 
-        // Setup Score Form Hidden Inputs
         const form = document.getElementById('form-score');
         if (form) {
             form.querySelector('[name="category"]').value = data.category || '';
@@ -177,13 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
             form.querySelector('[name="exercise_text"]').value = data.exerciseText || '';
 
             const answerCard = document.getElementById('answer-card');
-            if (answerCard) answerCard.style.display = 'block'; // Make answer card visible
-
-            // Reset textarea? Maybe keep if resubmitting?
-            // form.querySelector('[name="user_answer"]').value = "(1)\n(2)\n(3)\n(4)\n(5)";
+            if (answerCard) answerCard.style.display = 'block';
         }
 
-        // Hide previous score result if any
         const scoreResultCard = document.querySelector('.score-badge')?.closest('.card');
         if (scoreResultCard) {
             scoreResultCard.style.display = 'none';
@@ -193,24 +189,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderScoreResult(data) {
-        // Check if result container exists, if not create/show it
-        // For simplicity, we assume the structure matches index.blade.php
-        // We might need to dynamically insert the Score Card if it doesn't exist yet
-
-        // Ideally, index.blade.php should have empty containers for these ready to be filled/shown
-        // For this refactor, let's assume we update the existing DOM if present, 
-        // OR we might need to reload if structure is too complex. 
-        // BUT we are doing SPA-like update.
-
-        // Let's implement a simple Dynamic Score Card renderer or expect it in DOM
-
         let scoreContainer = document.getElementById('scoring-content');
         if (!scoreContainer) {
-            // Need to insert the score card structure if not present
-            // (e.g. first time scoring in this session)
-            // Selecting the exercise card (which should be present)
             const exerciseCard = document.getElementById('exercise-content').closest('.card')
-                .nextElementSibling; // The Answer Form Card
+                .nextElementSibling;
 
             const resultHtml = `
             <div id="score-result-card" class="card" style="text-align: center; border-top: 8px solid #4a90e2; padding-top: 40px;">
@@ -223,21 +205,13 @@ document.addEventListener('DOMContentLoaded', () => {
             scoreContainer = document.getElementById('scoring-content');
         }
 
-        // Update Score Badge
         const match = (data.scoringResult || '').match(/点数：(\d+)/);
         const scoreValue = match ? parseInt(match[1]) : 0;
         const scoreColor = scoreValue >= 80 ? '#48bb78' : (scoreValue >= 60 ? '#ecc94b' : '#f6ad55');
 
-        const badgeContainer = document.getElementById('score-badge-container') || document.querySelector('.score-badge').parentElement;
-        // If we found the specific container div (from dynamic insertion) or just the parent
-        // Let's just find where to put the badge.
-
-        // Simpler: Just replace the HTML of the badge area if possible, or rebuild it.
-        // Let's adhere to the structure:
         const scoreCard = scoreContainer.closest('.card');
         scoreCard.style.display = 'block';
 
-        // Find or create badge
         let badge = scoreCard.querySelector('.score-badge');
         if (!badge) {
             badge = document.createElement('div');
@@ -252,10 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = scoreCard.querySelector('.score-label');
         if (label) label.style.color = scoreColor;
 
-        // Content
         scoreContainer.innerHTML = parseMarkdown(data.scoringResult);
-
-        // Scroll to result
         scoreCard.scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -287,9 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Original Logic (Subcategory Sync, Counter, etc) ---
-
-    // 小分類の選択肢を同期する
     function syncSubcategoryList() {
         if (!categorySelect || !subcategorySelect) return;
         const selectedCategory = categorySelect.value;
@@ -297,7 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedCategory) {
             const opt = document.createElement('option');
             opt.value = "";
-            opt.textContent = "（選択不要）";
+            opt.textContent = "選択不要";
+            opt.disabled = true;
+            opt.selected = true;
             subcategorySelect.replaceChildren(opt);
             subcategorySelect.disabled = true;
             return;
@@ -324,7 +294,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (categorySelect) categorySelect.addEventListener('change', syncSubcategoryList);
     syncSubcategoryList();
 
-    // 文字数カウント
     const answerArea = document.getElementById('user_answer');
     const countBox = document.getElementById('segment-counters');
 
@@ -373,7 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return result.join('\n');
     }
 
-    // Initialize display on load (if SSR content exists)
     function initializeDisplay() {
         const { exerciseRaw, scoringRaw } = window.RissApp || {};
         if (exerciseRaw) {

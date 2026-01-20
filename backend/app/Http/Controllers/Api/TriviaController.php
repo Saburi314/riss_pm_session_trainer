@@ -8,23 +8,23 @@ use Illuminate\Http\Request;
 
 class TriviaController extends Controller
 {
-    public function random(Request $request)
+    /**
+     * トリビアのリストをまとめて取得する
+     */
+    public function randomList(Request $request)
     {
         $category = $request->input('category');
 
         $query = SecurityTrivia::query();
 
+        // カテゴリの指定がある場合は、カテゴリに関連したトリビアを取得する
         if ($category) {
             $query->where('category', $category);
         }
 
-        // カテゴリに該当がない場合は全件から取得
-        if ($query->count() === 0) {
-            $query = SecurityTrivia::query();
-        }
+        // トリビアを10件まとめて取得
+        $trivias = $query->inRandomOrder()->limit(10)->get();
 
-        $trivia = $query->inRandomOrder()->first();
-
-        return response()->json($trivia);
+        return response()->json($trivias);
     }
 }
