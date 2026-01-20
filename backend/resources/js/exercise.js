@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedCategory) {
             const opt = document.createElement('option');
             opt.value = "";
-            opt.textContent = "選択不要";
+            opt.textContent = window.RissApp.noSelectionLabel;
             opt.disabled = true;
             opt.selected = true;
             subcategorySelect.replaceChildren(opt);
@@ -281,16 +281,16 @@ document.addEventListener('DOMContentLoaded', () => {
         subcategorySelect.disabled = false;
         const defaultOpt = document.createElement('option');
         defaultOpt.value = "";
-        defaultOpt.textContent = "ランダム/全般";
+        defaultOpt.textContent = window.RissApp.defaultLabel;
         subcategorySelect.replaceChildren(defaultOpt);
 
         if (categories && categories[selectedCategory]) {
             const subcategories = categories[selectedCategory].subcategories;
-            for (const [key, label] of Object.entries(subcategories)) {
+            for (const [code, label] of Object.entries(subcategories)) {
                 const opt = document.createElement('option');
-                opt.value = key;
+                opt.value = code;
                 opt.textContent = label;
-                if (key === currentSubcategory) opt.selected = true;
+                if (code === currentSubcategory) opt.selected = true;
                 subcategorySelect.appendChild(opt);
             }
         }

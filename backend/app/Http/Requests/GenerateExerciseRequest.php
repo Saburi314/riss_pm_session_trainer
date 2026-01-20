@@ -2,7 +2,8 @@
 
 namespace App\Http\Requests;
 
-use App\Services\PromptService;
+use App\Models\Category;
+use App\Models\Subcategory;
 use Illuminate\Foundation\Http\FormRequest;
 
 class GenerateExerciseRequest extends FormRequest
@@ -23,8 +24,8 @@ class GenerateExerciseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category' => ['nullable', 'string', 'in:' . implode(',', array_keys(PromptService::CATEGORIES))],
-            'subcategory' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'in:' . implode(',', Category::getAllCodes())],
+            'subcategory' => ['nullable', 'string', 'in:' . implode(',', Subcategory::getAllCodes())],
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\GenerateExerciseRequest;
 use App\Http\Requests\ScoreExerciseRequest;
+use App\Models\Category;
 use App\Services\ExerciseService;
 use App\Services\PromptService;
 
@@ -12,7 +13,8 @@ class ExerciseController extends Controller
 {
     public function index()
     {
-        return view('exercise.index');
+        $categories = Category::getDisplayData();
+        return view('exercise.index', compact('categories'));
     }
 
     public function generate(GenerateExerciseRequest $request, ExerciseService $exerciseService, PromptService $promptService)

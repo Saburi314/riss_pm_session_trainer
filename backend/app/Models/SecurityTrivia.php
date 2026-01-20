@@ -15,4 +15,18 @@ class SecurityTrivia extends Model
         'content',
         'category',
     ];
+
+    /**
+     * カテゴリに基づいてランダムなトリビアを取得
+     */
+    public static function getRandomListByCategory(?string $categoryCode, int $limit = 10)
+    {
+        $query = self::query();
+
+        if ($categoryCode) {
+            $query->where('category', $categoryCode);
+        }
+
+        return $query->inRandomOrder()->limit($limit)->get();
+    }
 }

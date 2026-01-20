@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Category;
+use App\Models\Subcategory;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ScoreExerciseRequest extends FormRequest
@@ -22,8 +24,8 @@ class ScoreExerciseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category' => ['nullable', 'string'],
-            'subcategory' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'in:' . implode(',', Category::getAllCodes())],
+            'subcategory' => ['nullable', 'string', 'in:' . implode(',', Subcategory::getAllCodes())],
             'exercise_text' => ['required', 'string', 'max:80000'],
             'user_answer' => ['required', 'string', 'max:20000'],
         ];

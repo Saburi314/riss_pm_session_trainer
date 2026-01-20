@@ -14,16 +14,7 @@ class TriviaController extends Controller
     public function randomList(Request $request)
     {
         $category = $request->input('category');
-
-        $query = SecurityTrivia::query();
-
-        // カテゴリの指定がある場合は、カテゴリに関連したトリビアを取得する
-        if ($category) {
-            $query->where('category', $category);
-        }
-
-        // トリビアを10件まとめて取得
-        $trivias = $query->inRandomOrder()->limit(10)->get();
+        $trivias = SecurityTrivia::getRandomListByCategory($category);
 
         return response()->json($trivias);
     }

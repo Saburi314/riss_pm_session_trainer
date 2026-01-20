@@ -51,16 +51,16 @@
         <div style="flex: 1;">
           <label class="score-label">Category</label>
           <select name="category" id="category" style="width: 100%;">
-            <option value="">ランダム/全般</option>
-            @foreach(\App\Services\PromptService::CATEGORIES as $key => $cat)
-              <option value="{{ $key }}" @selected(($category ?? '') === $key)>{{ $cat['category'] }}</option>
+            <option value="">{{ \App\Models\Category::DEFAULT_NAME }}</option>
+            @foreach($categories as $code => $cat)
+              <option value="{{ $code }}" @selected(($category ?? '') === $code)>{{ $cat['category'] }}</option>
             @endforeach
           </select>
         </div>
         <div style="flex: 1;">
           <label class="score-label">Subcategory</label>
           <select name="subcategory" id="subcategory" style="width: 100%;" disabled>
-            <option value="" selected disabled>選択不要</option>
+            <option value="" selected disabled>{{ \App\Models\Category::NO_SELECTION_REQUIRED_NAME }}</option>
           </select>
         </div>
         <button type="submit">問題を生成する</button>
@@ -129,10 +129,12 @@
 
   <script>
     window.RissApp = {
-      categories: @json(\App\Services\PromptService::CATEGORIES),
+      categories: @json($categories),
       currentSubcategory: "{{ $subcategory ?? '' }}",
       exerciseRaw: @json($exerciseText ?? ''),
-      scoringRaw: @json($scoringResult ?? '')
+      scoringRaw: @json($scoringResult ?? ''),
+      defaultLabel: "{{ \App\Models\Category::DEFAULT_NAME }}",
+      noSelectionLabel: "{{ \App\Models\Category::NO_SELECTION_REQUIRED_NAME }}"
     };
   </script>
 </body>
