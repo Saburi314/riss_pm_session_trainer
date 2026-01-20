@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
         timerInterval = setInterval(() => {
             seconds++;
             if (timerCount) timerCount.textContent = seconds;
-        }, 2000);
+        }, 1000);
 
         const category = categorySelect ? categorySelect.value : '';
         await fetchTriviaList(category);
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (triviaInterval) clearInterval(triviaInterval);
-        triviaInterval = setInterval(showNextTrivia, 8000);
+        triviaInterval = setInterval(showNextTrivia, 15000);
     }
 
     function stopLoading() {
@@ -241,6 +241,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `<div class="mermaid">${codeText}</div>`;
             }
             return `<pre><code class="language-${language}">${codeText}</code></pre>`;
+        };
+
+        // URLなどの自動リンクを無効化（テキストとして表示）
+        renderer.link = function (href, title, text) {
+            return text;
         };
 
         const robustText = robustPreprocess(text);
