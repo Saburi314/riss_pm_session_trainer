@@ -9,8 +9,8 @@ class PromptService
      */
     public const CATEGORIES = [
         'MGT' => [
-            'label' => '情報セキュリティマネジメントの推進または支援に関すること',
-            'minors' => [
+            'category' => '情報セキュリティマネジメントの推進または支援に関すること',
+            'subcategories' => [
                 'policy' => '情報セキュリティ方針の策定',
                 'risk_assessment' => '情報セキュリティリスクアセスメント',
                 'risk_response' => '情報セキュリティリスク対応',
@@ -21,8 +21,8 @@ class PromptService
             ],
         ],
         'SYS' => [
-            'label' => '情報システムの企画・設計・開発・運用でのセキュリティ確保の推進又は支援に関する事',
-            'minors' => [
+            'category' => '情報システムの企画・設計・開発・運用でのセキュリティ確保の推進又は支援に関する事',
+            'subcategories' => [
                 'planning' => '企画・要件定義（セキュリティの観点）',
                 'deployment' => '製品・サービスのセキュアな導入',
                 'architecture' => 'アーキテクチャの設計（セキュリティの観点）',
@@ -34,8 +34,8 @@ class PromptService
             ],
         ],
         'OPS' => [
-            'label' => '情報及び情報システムの利用におけるセキュリティ対策の適用の推進又は支援に関すること',
-            'minors' => [
+            'category' => '情報及び情報システムの利用におけるセキュリティ対策の適用の推進又は支援に関すること',
+            'subcategories' => [
                 'crypto' => '暗号利用及び鍵管理',
                 'malware' => 'マルウェア対策',
                 'backup' => 'バックアップ',
@@ -50,8 +50,8 @@ class PromptService
             ],
         ],
         'INC' => [
-            'label' => '情報セキュリティインシデント管理の推進又は支援に関すること',
-            'minors' => [
+            'category' => '情報セキュリティインシデント管理の推進又は支援に関すること',
+            'subcategories' => [
                 'org' => '情報セキュリティインシデントの管理体制の構築',
                 'assessment' => '情報セキュリティ事象の評価',
                 'response' => '情報セキュリティインシデントへの対応',
@@ -60,9 +60,9 @@ class PromptService
         ],
     ];
 
-    public function buildGeneratePrompt(?string $major, ?string $minor): string
+    public function buildGeneratePrompt(?string $category, ?string $subcategory): string
     {
-        $context = $this->resolveCategoryLabels($major, $minor);
+        $context = $this->getCategoryDisplayNames($category, $subcategory);
 
         return <<<PROMPT
 {$this->getSystemContextPrompt()}
@@ -77,8 +77,8 @@ class PromptService
   - 図（Mermaid）、表、コードブロックの前後には必ず **2行の空行** を挿入してください。
 
 【分野】
-大項目：{$context['major']}
-小項目：{$context['minor']}
+大分類：{$context['category']}
+小分類：{$context['subcategory']}
 
 【基本構成】
 1. **問題文**: 800〜1500字程度。詳細で正確なシナリオを記述してください。
@@ -90,6 +90,10 @@ class PromptService
    - **穴埋めの目立たせ（最重要）**: 穴埋め箇所 ［ a ］ は、必ず太字を使用して **［  a  ］** と記述してください。前後には全角スペースを入れ、視認性を高めてください（例：`**［  a  ］**`）。
    - **ヒントの強化**: 穴埋め箇所の用語を特定できるよう、その用語の定義や具体的な役割を説明する文章（ヒント）を必ず周辺に含めてください。
    - **関連性の徹底**: 問題文中の叙述、図、表、ソースコードは、必ずいずれかの設問を解くために必要な情報として構成してください。
+   - 設問(2)の選択肢の数は、問題に応じた任意の数にしてください。
+   - 設問(3)の分析させる内容は、問題に応じた任意の分析内容にしてください。
+   - 設問(4)の文字数制限は、問題に応じた任意の文字数にしてください。
+   - 設問(5)の総合的な対策は、問題に応じた任意の対策や問題点、機能や仕組み、方法にしてください。
 
 2. **設問**: **必ず以下の5問**をこの順番で作成してください。
    - **(1)**: 本文中の **［  a  ］** に当てはめる適切な用語を答えさせる。
@@ -97,7 +101,7 @@ class PromptService
    - **(3)**: 本文2番目の **下線②** について分析させる。
      *※問題文中にソースコード（図）が含まれる場合は、必ずそのコードの内容を具体的に分析し、問いに答える形式にしてください。*
    - **(4)**: 本文3番目の **下線③** の理由や仕組みを問う。「〜40文字以内で答えよ。」のように文字数制限を付与してください。
-   - **(5)**: 本文4番目の **下線④** に基づく総合的な対策。末尾は 「〜具体的に答えよ。」 または 「〜具体的に述べよ。」 としてください。
+   - **(5)**: 本文4番目の **下線④** に基づく総合的な対策や問題点、機能や仕組み、方法を問う。末尾は 「〜具体的に答えよ。」 または 「〜具体的に述べよ。」 としてください。
 
 【出力形式】
 【問題文】
@@ -112,15 +116,15 @@ class PromptService
 PROMPT;
     }
 
-    public function buildScorePrompt(string $exerciseText, string $userAnswer, ?string $major, ?string $minor): string
+    public function buildScorePrompt(string $exerciseText, string $userAnswer, ?string $category, ?string $subcategory): string
     {
-        $context = $this->resolveCategoryLabels($major, $minor);
+        $context = $this->getCategoryDisplayNames($category, $subcategory);
 
         return <<<PROMPT
 {$this->getSystemContextPrompt()}
 提示された「演習問題」に対する「受験者の解答」を厳格、かつ建設的に採点し、詳細な講評を行ってください。
 
-【分野背景】{$context['major']} / {$context['minor']}
+【分野背景】大分類：{$context['category']} / 小分類：{$context['subcategory']}
 
 【採点時の留意事項】
 - **テキストベースの回答**: 受験者はテキストエリアに文字のみで回答しています。図や表を描くことはできません。
@@ -152,19 +156,19 @@ PROMPT;
 PROMPT;
     }
 
-    private function resolveCategoryLabels(?string $major, ?string $minor): array
+    private function getCategoryDisplayNames(?string $categoryKey, ?string $subcategoryKey): array
     {
-        $majorLabel = '全般（ランダム）';
-        $minorLabel = '全般（ランダム）';
+        $categoryLabel = '全般（ランダム）';
+        $subcategoryLabel = '全般（ランダム）';
 
-        if ($major && isset(self::CATEGORIES[$major])) {
-            $majorLabel = self::CATEGORIES[$major]['label'];
-            if ($minor && isset(self::CATEGORIES[$major]['minors'][$minor])) {
-                $minorLabel = self::CATEGORIES[$major]['minors'][$minor];
+        if ($categoryKey && isset(self::CATEGORIES[$categoryKey])) {
+            $categoryLabel = self::CATEGORIES[$categoryKey]['category'];
+            if ($subcategoryKey && isset(self::CATEGORIES[$categoryKey]['subcategories'][$subcategoryKey])) {
+                $subcategoryLabel = self::CATEGORIES[$categoryKey]['subcategories'][$subcategoryKey];
             }
         }
 
-        return ['major' => $majorLabel, 'minor' => $minorLabel];
+        return ['category' => $categoryLabel, 'subcategory' => $subcategoryLabel];
     }
 
     private function getSystemContextPrompt(): string

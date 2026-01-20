@@ -16,20 +16,20 @@ class ExerciseController extends Controller
     public function generate(Request $request, ExerciseService $exerciseService, PromptService $promptService)
     {
         $request->validate([
-            'major_category' => ['nullable', 'string', 'in:' . implode(',', array_keys(PromptService::CATEGORIES))],
-            'minor_category' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'in:' . implode(',', array_keys(PromptService::CATEGORIES))],
+            'subcategory' => ['nullable', 'string'],
         ]);
 
-        $major = $request->input('major_category');
-        $minor = $request->input('minor_category');
+        $category = $request->input('category');
+        $subcategory = $request->input('subcategory');
 
-        $prompt = $promptService->buildGeneratePrompt($major, $minor);
+        $prompt = $promptService->buildGeneratePrompt($category, $subcategory);
 
         $exerciseText = $exerciseService->generateExercise($prompt);
 
         return view('exercise.index', [
-            'major_category' => $major,
-            'minor_category' => $minor,
+            'category' => $category,
+            'subcategory' => $subcategory,
             'exerciseText' => $exerciseText,
         ]);
     }
@@ -37,24 +37,24 @@ class ExerciseController extends Controller
     public function score(Request $request, ExerciseService $exerciseService, PromptService $promptService)
     {
         $request->validate([
-            'major_category' => ['nullable', 'string'],
-            'minor_category' => ['nullable', 'string'],
+            'category' => ['nullable', 'string'],
+            'subcategory' => ['nullable', 'string'],
             'exercise_text' => ['required', 'string', 'max:80000'],
             'user_answer' => ['required', 'string', 'max:20000'],
         ]);
 
-        $major = $request->input('major_category');
-        $minor = $request->input('minor_category');
+        $category = $request->input('category');
+        $subcategory = $request->input('subcategory');
         $exerciseText = $request->input('exercise_text', '');
         $userAnswer = $request->input('user_answer', '');
 
-        $prompt = $promptService->buildScorePrompt($exerciseText, $userAnswer, $major, $minor);
+        $prompt = $promptService->buildScorePrompt($exerciseText, $userAnswer, $category, $subcategory);
 
         $scoringResult = $exerciseService->scoreExercise($prompt);
 
         return view('exercise.index', [
-            'major_category' => $major,
-            'minor_category' => $minor,
+            'category' => $category,
+            'subcategory' => $subcategory,
             'exerciseText' => $exerciseText,
             'userAnswer' => $userAnswer,
             'scoringResult' => $scoringResult,

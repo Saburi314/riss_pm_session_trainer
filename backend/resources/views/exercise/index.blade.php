@@ -214,18 +214,18 @@
       @csrf
       <div class="row">
         <div style="flex: 1;">
-          <label class="score-label">大分類</label>
-          <select name="major_category" id="major_category" style="width: 100%;">
+          <label class="score-label">Category</label>
+          <select name="category" id="category" style="width: 100%;">
             <option value="">ランダム/全般</option>
             @foreach(\App\Services\PromptService::CATEGORIES as $key => $cat)
-              <option value="{{ $key }}" @selected(($major_category ?? '') === $key)>{{ $cat['label'] }}</option>
+              <option value="{{ $key }}" @selected(($category ?? '') === $key)>{{ $cat['category'] }}</option>
             @endforeach
           </select>
         </div>
         <div style="flex: 1;">
-          <label class="score-label">小分類</label>
-          <select name="minor_category" id="minor_category" style="width: 100%;">
-            <option value="">（最初に大分類を選択）</option>
+          <label class="score-label">Subcategory</label>
+          <select name="subcategory" id="subcategory" style="width: 100%;">
+            <option value="">（最初にCategoryを選択してください）</option>
           </select>
         </div>
         <button type="submit">問題を生成する</button>
@@ -240,9 +240,6 @@
         <span style="background: #4a90e2; width: 8px; height: 24px; border-radius: 4px; margin-right: 12px;"></span>
         演習問題
       </h2>
-      <div id="exercise-content" class="markdown-body">
-        <p class="muted">読み込み中...</p>
-      </div>
     </div>
 
     <div class="card">
@@ -258,8 +255,8 @@
 
       <form method="post" action="{{ route('exercise.score') }}">
         @csrf
-        <input type="hidden" name="major_category" value="{{ $major_category ?? '' }}">
-        <input type="hidden" name="minor_category" value="{{ $minor_category ?? '' }}">
+        <input type="hidden" name="category" value="{{ $category ?? '' }}">
+        <input type="hidden" name="subcategory" value="{{ $subcategory ?? '' }}">
         <input type="hidden" name="exercise_text" value="{{ $exerciseText }}">
 
         <textarea name="user_answer" id="user_answer"
@@ -295,149 +292,75 @@
   @endisset
 
   <script>
-    // 描画ロジック
-    const exerciseRaw = @json($exerciseText ?? '');
-    const scoringRaw = @json($scoringResult ?? '');
-
-    function preprocessMarkdown(text) {
-      if (!text) return '';
-      let lines = text.split('\n');
-      let result = [];
-      let inTable = false;
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-        let trimmed = line.trim();
-        const isTableLine = trimmed.startsWith('|') && (trimmed.match(/\|/g) || []).length >= 2;
-        if (isTableLine) {
-          if (!inTable) {
-            inTable = true;
-            result.push(line);
-            let nextLine = lines[i + 1] ? lines[i + 1].trim() : '';
-            if (nextLine.startsWith('|') && nextLine.includes('---')) {
-              result.push(lines[i + 1]);
-              i++;
-            } else {
-              const segments = (line.match(/\|/g) || []).length - 1;
-              result.push('|' + Array(Math.max(1, segments)).fill('---|').join(''));
-            }
-          } else {
-            if (trimmed.includes('---') && i > 0 && lines[i - 1].trim().includes('---')) continue;
-            result.push(line);
-          }
-        } else {
-          inTable = false;
-          result.push(line);
-        }
-      }
-      return result.join('\n');
-    }
-
-    function renderMarkdown(raw, targetId) {
-      if (!raw) return;
-      const target = document.getElementById(targetId);
-      if (!target) return;
-
-      const cleanRaw = preprocessMarkdown(raw);
-
-      marked.setOptions({ breaks: true, gfm: true });
-      let html = marked.parse(cleanRaw);
-
-      // 穴埋め箇所 ［ a ］ または [ a ] 等を検出してクラスを付与
-      html = html.replace(/[［\[]\s*[a-z]\s*[］\]]/g, '<span class="blank-marker">$&</span>');
-
-      const temp = document.createElement('div');
-      temp.innerHTML = html;
-
-      const potentialMermaids = temp.querySelectorAll('pre');
-      potentialMermaids.forEach(pre => {
-        const text = pre.textContent.trim();
-        if (/^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram-v2|stateDiagram|erDiagram|gantt|pie|gitGraph|C4Context|mindmap|timeline)/i.test(text)) {
-          const div = document.createElement('div');
-          div.className = 'mermaid';
-          const decodedText = text
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'");
-          div.textContent = decodedText;
-          pre.replaceWith(div);
-        }
-      });
-
-      target.innerHTML = temp.innerHTML;
-
-      if (window.mermaid) {
-        window.mermaid.run({
-          nodes: target.querySelectorAll('.mermaid'),
-          suppressErrors: true
-        }).catch(err => {
-          console.error("Mermaid error:", err);
-        });
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      renderMarkdown(exerciseRaw, 'exercise-content');
-      renderMarkdown(scoringRaw, 'scoring-content');
-    });
-
     const categories = @json(\App\Services\PromptService::CATEGORIES);
-    const majorSelect = document.getElementById('major_category');
-    const minorSelect = document.getElementById('minor_category');
-    const currentMinor = "{{ $minor_category ?? '' }}";
+    const categorySelect = document.getElementById('category');
+    const subcategorySelect = document.getElementById('subcategory');
+    const currentSubcategory = "{{ $subcategory ?? '' }}";
 
-    function updateMinors() {
-      if (!majorSelect || !minorSelect) return;
-      const selectedMajor = majorSelect.value;
+    // 小分類の選択肢を同期する（Categoryを選択するとSubcategoryの選択肢が更新される）
+    function syncSubcategoryList() {
+      if (!categorySelect || !subcategorySelect) return;
+      const selectedCategory = categorySelect.value;
 
-      if (!selectedMajor) {
-        minorSelect.innerHTML = '<option value="">（選択不要）</option>';
-        minorSelect.disabled = true;
+      if (!selectedCategory) {
+        const opt = document.createElement('option');
+        opt.value = "";
+        opt.textContent = "（選択不要）";
+        subcategorySelect.replaceChildren(opt);
+        subcategorySelect.disabled = true;
         return;
       }
 
-      minorSelect.disabled = false;
-      minorSelect.innerHTML = '<option value="">ランダム/全般</option>';
+      subcategorySelect.disabled = false;
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = "";
+      defaultOpt.textContent = "ランダム/全般";
+      subcategorySelect.replaceChildren(defaultOpt);
 
-      if (categories[selectedMajor]) {
-        const minors = categories[selectedMajor].minors;
-        for (const [key, label] of Object.entries(minors)) {
+      if (categories[selectedCategory]) {
+        const subcategories = categories[selectedCategory].subcategories;
+        for (const [key, label] of Object.entries(subcategories)) {
           const opt = document.createElement('option');
           opt.value = key;
           opt.textContent = label;
-          if (key === currentMinor) opt.selected = true;
-          minorSelect.appendChild(opt);
+          if (key === currentSubcategory) opt.selected = true;
+          subcategorySelect.appendChild(opt);
         }
       }
     }
 
-    if (majorSelect) majorSelect.addEventListener('change', updateMinors);
-    updateMinors();
+    if (categorySelect) categorySelect.addEventListener('change', syncSubcategoryList);
+    syncSubcategoryList();
 
-    // 文字数カウント
     const answerArea = document.getElementById('user_answer');
     const countBox = document.getElementById('segment-counters');
 
-    if (answerArea) {
-      answerArea.addEventListener('input', () => {
-        const val = answerArea.value;
-        const matches = [...val.matchAll(/\((\d+)\)/g)];
-        if (!countBox) return;
-        countBox.innerHTML = '';
+    // 文字数カウント（設問4のみ文字数をカウント）
+    function refreshCharacterCounter() {
+      if (!answerArea || !countBox) return;
+      const val = answerArea.value;
+      const matches = [...val.matchAll(/\((\d+)\)/g)];
+      countBox.textContent = '';
 
-        if (matches.length === 0 && val.length > 0) {
-          countBox.innerHTML = `<span class="counter-tag">全体: ${val.length} 文字</span>`;
-        } else {
-          matches.forEach((m, i) => {
-            const start = m.index + m[0].length;
-            const end = matches[i + 1] ? matches[i + 1].index : val.length;
-            const len = val.substring(start, end).trim().length;
-            countBox.innerHTML += `<span class="counter-tag">(${m[1]}): ${len} 文字</span>`;
-          });
+      matches.forEach((m, i) => {
+        const num = m[1];
+        // 設問4のみ文字数をカウント
+        if (num === '4') {
+          const start = m.index + m[0].length;
+          const end = matches[i + 1] ? matches[i + 1].index : val.length;
+          const len = val.substring(start, end).trim().length;
+
+          const span = document.createElement('span');
+          span.className = 'counter-tag';
+          span.textContent = `(${num}): ${len} 文字`;
+          countBox.appendChild(span);
         }
       });
-      answerArea.dispatchEvent(new Event('input'));
+    }
+
+    if (answerArea) {
+      answerArea.addEventListener('input', refreshCharacterCounter);
+      refreshCharacterCounter();
     }
   </script>
 </body>
