@@ -25,7 +25,7 @@ class ExerciseService
      */
     public function generateExercise(string $prompt): string
     {
-        return $this->callResponses($prompt, 5000, 'low');
+        return $this->callResponses($prompt, 7500, 'low');
     }
 
     /**
@@ -33,7 +33,7 @@ class ExerciseService
      */
     public function scoreExercise(string $prompt): string
     {
-        return $this->callResponses($prompt, 5000, 'low');
+        return $this->callResponses($prompt, 75000, 'low');
     }
 
     /**
@@ -65,7 +65,7 @@ class ExerciseService
         ];
 
         try {
-            $response = Http::timeout(120)
+            $response = Http::timeout(180)
                 ->withToken($this->apiKey)
                 ->acceptJson()
                 ->post('https://api.openai.com/v1/responses', $payload);
