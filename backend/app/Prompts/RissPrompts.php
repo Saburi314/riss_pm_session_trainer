@@ -8,8 +8,9 @@ class RissPrompts
 
   public static function getGeneratePrompt(array $context): string
   {
+    $systemContext = self::SYSTEM_CONTEXT;
     return <<<PROMPT
-{self::SYSTEM_CONTEXT}
+{$systemContext}
 情報処理安全確保支援士の午後試験に基づいた「演習問題」を、以下の条件で1問作成してください。
 作成にあたっては、まず **file_search を用いて実際の午後試験問題（過去問）を検索**し、その文体、難易度、および設問の構成を十分に分析した上で、本物の試験と区別がつかないレベルのクオリティで出力してください。
 全ての設問には必ず、問題文中にヒントを散りばめてください。問題文を読み解くことで必ず解答にたどり着けるようにしてください。すべての設問は、過去問での問題文中や解答に利用された内容かその類似問題を設問として問うようにしてください。
@@ -88,8 +89,9 @@ PROMPT;
 
   public static function getScorePrompt(string $exerciseText, string $userAnswer, array $context): string
   {
+    $systemContext = self::SYSTEM_CONTEXT;
     return <<<PROMPT
-{self::SYSTEM_CONTEXT}
+{$systemContext}
 提示された「演習問題」に対する「受験者の解答」を厳格、かつ建設的に採点し、詳細な講評を行ってください。
 
 【分野背景】大分類：{$context['category']} / 小分類：{$context['subcategory']}

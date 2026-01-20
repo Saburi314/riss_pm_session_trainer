@@ -23,6 +23,6 @@ class Subcategory extends Model
             return $category ? $category->subcategories()->pluck('code')->toArray() : [];
         }
 
-        return self::pluck('code')->distinct()->toArray();
+        return self::pluck('code')->unique()->toArray();
     }
 }

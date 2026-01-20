@@ -16,7 +16,7 @@ class ExerciseService
     public function __construct()
     {
         $this->apiKey = (string) config('services.openai.api_key');
-        $this->model = (string) (config('services.openai.model') ?: 'gpt-5-2025-08-07');
+        $this->model = (string) (config('services.openai.model') ?: 'gpt-5.2-2025-12-11');
         $this->vectorStoreId = (string) config('services.openai.vector_store_id');
     }
 
