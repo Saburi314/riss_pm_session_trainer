@@ -7,6 +7,7 @@ use App\Http\Requests\ScoreExerciseRequest;
 use App\Services\ExerciseService;
 use App\Services\PromptService;
 
+
 class ExerciseController extends Controller
 {
     public function index()
@@ -23,7 +24,8 @@ class ExerciseController extends Controller
 
         $exerciseText = $exerciseService->generateExercise($prompt);
 
-        return view('exercise.index', [
+        return response()->json([
+            'status' => 'success',
             'category' => $category,
             'subcategory' => $subcategory,
             'exerciseText' => $exerciseText,
@@ -41,7 +43,8 @@ class ExerciseController extends Controller
 
         $scoringResult = $exerciseService->scoreExercise($prompt);
 
-        return view('exercise.index', [
+        return response()->json([
+            'status' => 'success',
             'category' => $category,
             'subcategory' => $subcategory,
             'exerciseText' => $exerciseText,

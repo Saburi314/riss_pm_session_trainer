@@ -4,15 +4,15 @@ namespace App\Prompts;
 
 class RissPrompts
 {
-    private const SYSTEM_CONTEXT = "あなたは、情報処理安全確保支援士（RISS）の午後試験対策を専門とする高度な学習指導AIトレーナーです。";
+  private const SYSTEM_CONTEXT = "あなたは、情報処理安全確保支援士（RISS）の午後試験対策を専門とする高度な学習指導AIトレーナーです。";
 
-    public static function getGeneratePrompt(array $context): string
-    {
-        return <<<PROMPT
+  public static function getGeneratePrompt(array $context): string
+  {
+    return <<<PROMPT
 {self::SYSTEM_CONTEXT}
 情報処理安全確保支援士の午後試験に基づいた「演習問題」を、以下の条件で1問作成してください。
 作成にあたっては、まず **file_search を用いて実際の午後試験問題（過去問）を検索**し、その文体、難易度、および設問の構成を十分に分析した上で、本物の試験と区別がつかないレベルのクオリティで出力してください。
-全ての設問には必ず、問題文中にヒントを散りばめてください。問題文を読み解くことで必ず解答にたどり着けるようにしてください。すべての設問は、過去問での問題文中や解答に利用された内容を設問として問うようにしてください。
+全ての設問には必ず、問題文中にヒントを散りばめてください。問題文を読み解くことで必ず解答にたどり着けるようにしてください。すべての設問は、過去問での問題文中や解答に利用された内容かその類似問題を設問として問うようにしてください。
 
 **重要項目**:
 - **冒頭・末尾のメタ情報排除**: 【問題文】の冒頭（「本問は〜」）や、演習の最後に付随する「注記」「解説」「出典の傾向」といった説明的な文章は一切入れず、試験問題のコンテンツのみを出力してください。
@@ -83,11 +83,11 @@ class RissPrompts
 (4) ...
 (5) ...
 PROMPT;
-    }
+  }
 
-    public static function getScorePrompt(string $exerciseText, string $userAnswer, array $context): string
-    {
-        return <<<PROMPT
+  public static function getScorePrompt(string $exerciseText, string $userAnswer, array $context): string
+  {
+    return <<<PROMPT
 {self::SYSTEM_CONTEXT}
 提示された「演習問題」に対する「受験者の解答」を厳格、かつ建設的に採点し、詳細な講評を行ってください。
 
@@ -121,5 +121,5 @@ PROMPT;
 【受験者解答】
 {$userAnswer}
 PROMPT;
-    }
+  }
 }
