@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\GenerateExerciseRequest;
+use App\Http\Requests\ScoreExerciseRequest;
 use App\Services\ExerciseService;
 use App\Services\PromptService;
 
@@ -13,13 +14,8 @@ class ExerciseController extends Controller
         return view('exercise.index');
     }
 
-    public function generate(Request $request, ExerciseService $exerciseService, PromptService $promptService)
+    public function generate(GenerateExerciseRequest $request, ExerciseService $exerciseService, PromptService $promptService)
     {
-        $request->validate([
-            'category' => ['nullable', 'string', 'in:' . implode(',', array_keys(PromptService::CATEGORIES))],
-            'subcategory' => ['nullable', 'string'],
-        ]);
-
         $category = $request->input('category');
         $subcategory = $request->input('subcategory');
 
@@ -34,15 +30,8 @@ class ExerciseController extends Controller
         ]);
     }
 
-    public function score(Request $request, ExerciseService $exerciseService, PromptService $promptService)
+    public function score(ScoreExerciseRequest $request, ExerciseService $exerciseService, PromptService $promptService)
     {
-        $request->validate([
-            'category' => ['nullable', 'string'],
-            'subcategory' => ['nullable', 'string'],
-            'exercise_text' => ['required', 'string', 'max:80000'],
-            'user_answer' => ['required', 'string', 'max:20000'],
-        ]);
-
         $category = $request->input('category');
         $subcategory = $request->input('subcategory');
         $exerciseText = $request->input('exercise_text', '');
