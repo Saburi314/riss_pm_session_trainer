@@ -78,16 +78,14 @@ export class UIManager {
 
         matches.forEach((m, i) => {
             const num = m[1];
-            if (['1', '3', '4', '5'].includes(num)) {
-                const start = m.index + m[0].length;
-                const end = matches[i + 1] ? matches[i + 1].index : val.length;
-                const len = val.substring(start, end).trim().length;
+            const start = m.index + m[0].length;
+            const end = matches[i + 1] ? matches[i + 1].index : val.length;
+            const len = val.substring(start, end).trim().length;
 
-                const span = document.createElement('span');
-                span.className = 'counter-tag';
-                span.textContent = `(${num}): ${len} 文字`;
-                countBox.appendChild(span);
-            }
+            const span = document.createElement('span');
+            span.className = 'counter-tag';
+            span.textContent = `(${num}): ${len} 文字`;
+            countBox.appendChild(span);
         });
     }
 }
