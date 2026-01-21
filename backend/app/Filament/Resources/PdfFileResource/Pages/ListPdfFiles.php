@@ -13,9 +13,6 @@ class ListPdfFiles extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
-                ->label('過去問PDFを個別でDBへ登録')
-                ->icon('heroicon-o-plus'),
             Actions\Action::make('batchImport')
                 ->label('過去問PDFを一括でへDB登録')
                 ->tooltip('raw_pdfsフォルダ内のPDFをスキャンして新着分をDBに登録します。')

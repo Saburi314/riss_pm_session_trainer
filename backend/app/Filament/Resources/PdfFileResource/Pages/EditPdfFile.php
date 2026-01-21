@@ -16,4 +16,14 @@ class EditPdfFile extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // ファイルが変更されていない場合（storage_path が空）、既存の値を保持
+        if (empty($data['storage_path'])) {
+            unset($data['storage_path']);
+        }
+
+        return $data;
+    }
 }

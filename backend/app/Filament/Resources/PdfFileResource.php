@@ -39,8 +39,11 @@ class PdfFileResource extends Resource
                             ->label('PDFファイル')
                             ->disk('local')
                             ->directory('private/pdfs/manual') // 手動アップロード用
-                            ->required()
-                            ->preserveFilenames(),
+                            ->required(fn(string $operation): bool => $operation === 'create')
+                            ->preserveFilenames()
+                            ->downloadable()
+                            ->openable()
+                            ->helperText('編集時にファイルを変更しない場合、既存のファイルが保持されます。'),
                         Forms\Components\TextInput::make('storage_disk')
                             ->label('ストレージディスク')
                             ->required()
@@ -240,7 +243,6 @@ class PdfFileResource extends Resource
     {
         return [
             'index' => Pages\ListPdfFiles::route('/'),
-            'create' => Pages\CreatePdfFile::route('/create'),
             'edit' => Pages\EditPdfFile::route('/{record}/edit'),
         ];
     }
