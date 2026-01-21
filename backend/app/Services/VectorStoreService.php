@@ -17,6 +17,14 @@ class VectorStoreService
         $this->vectorStoreId = (string) config('services.openai.vector_store_id');
     }
 
+    private function getHeaders(): array
+    {
+        return [
+            'Authorization' => 'Bearer ' . $this->apiKey,
+            'OpenAI-Beta' => 'assistants=v2',
+        ];
+    }
+
     public function syncFile(PdfFile $pdfFile): array
     {
         if (!$this->apiKey || !$this->vectorStoreId) {
@@ -64,7 +72,7 @@ class VectorStoreService
 
         /** @var \Illuminate\Http\Client\Response $response */
         $response = Http::timeout(120)
-            ->withToken($this->apiKey)
+            ->withHeaders($this->getHeaders())
             ->attach('file', file_get_contents($filePath), $pdfFile->filename)
             ->post('https://api.openai.com/v1/files', [
                 'purpose' => 'assistants',
@@ -89,11 +97,9 @@ class VectorStoreService
 
         /** @var \Illuminate\Http\Client\Response $response */
         $response = Http::timeout(60)
-            ->withToken($this->apiKey)
+            ->withHeaders($this->getHeaders())
             ->post("https://api.openai.com/v1/vector_stores/{$this->vectorStoreId}/files", [
                 'file_id' => $openaiFileId,
-                // 'attributes' => $attributes, // Note: OpenAI API for VS files might not support custom attributes directly here depending on version, check documentation if needed.
-                // But let's keep it as per existing logic in command.
             ]);
 
         if (!$response->ok()) {
@@ -124,7 +130,7 @@ class VectorStoreService
 
             /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::timeout(30)
-                ->withToken($this->apiKey)
+                ->withHeaders($this->getHeaders())
                 ->get("https://api.openai.com/v1/vector_stores/{$this->vectorStoreId}/files/{$vectorStoreFileId}");
 
             if (!$response->ok()) {
@@ -148,26 +154,5 @@ class VectorStoreService
             'status' => 'in_progress',
             'error_message' => 'Timeout waiting for Vector Store processing',
         ];
-    }
-
-    public function createVectorStore(string $name): string
-    {
-        if (!$this->apiKey) {
-            throw new \RuntimeException('OpenAI API key is not configured.');
-        }
-
-        /** @var \Illuminate\Http\Client\Response $response */
-        $response = Http::timeout(60)
-            ->withToken($this->apiKey)
-            ->post('https://api.openai.com/v1/vector_stores', [
-                'name' => $name,
-            ]);
-
-        if (!$response->ok()) {
-            $error = $response->json('error.message') ?? $response->body();
-            throw new \RuntimeException("Vector Store Creation error: {$error}");
-        }
-
-        return $response->json('id');
     }
 }

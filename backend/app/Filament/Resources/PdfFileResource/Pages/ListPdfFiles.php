@@ -44,12 +44,12 @@ class ListPdfFiles extends ListRecords
                     }
                 }),
             Actions\Action::make('syncVectorStore')
-                ->label('ベクターストアと同期')
+                ->label('ベクトルストアと一括同期')
                 ->tooltip('DBの未同期ファイルをAIエンジン（Vector Store）に転送します。')
                 ->icon('heroicon-o-cloud-arrow-up')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalHeading('AIベクターストアへの同期')
+                ->modalHeading('AIベクトルストアへの同期')
                 ->modalDescription('まだAIへ送信されていないファイルをすべて転送します。')
                 ->action(function () {
                     $exitCode = \Illuminate\Support\Facades\Artisan::call('vs:sync');
@@ -63,35 +63,6 @@ class ListPdfFiles extends ListRecords
                     } else {
                         \Filament\Notifications\Notification::make()
                             ->title('AI同期失敗')
-                            ->danger()
-                            ->send();
-                    }
-                }),
-            Actions\Action::make('initVectorStore')
-                ->label('新規ベクターストア作成')
-                ->tooltip('OpenAI側に新しいAIデータ保存領域（Vector Store）を作成します。')
-                ->icon('heroicon-o-sparkles')
-                ->color('gray')
-                ->requiresConfirmation()
-                ->modalHeading('新しいAIストアの作成')
-                ->modalDescription('OpenAI側に新しいVector Storeを作成します。作成されたIDは通知されます。')
-                ->action(function () {
-                    $output = new \Symfony\Component\Console\Output\BufferedOutput();
-                    $exitCode = \Illuminate\Support\Facades\Artisan::call('vs:init', [], $output);
-
-                    $message = $output->fetch();
-
-                    if ($exitCode === 0) {
-                        \Filament\Notifications\Notification::make()
-                            ->title('作成成功')
-                            ->body("新しいストアが作成されました：\n" . $message)
-                            ->success()
-                            ->persistent()
-                            ->send();
-                    } else {
-                        \Filament\Notifications\Notification::make()
-                            ->title('作成失敗')
-                            ->body($message)
                             ->danger()
                             ->send();
                     }

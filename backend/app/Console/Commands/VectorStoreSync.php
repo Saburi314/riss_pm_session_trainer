@@ -13,7 +13,7 @@ class VectorStoreSync extends Command
                             {--limit=10 : 一度に処理する最大件数}
                             {--retry : failed や cancelled のファイルも対象にする}';
 
-    protected $description = 'Sync pending/failed PDFs to OpenAI Vector Store';
+    protected $description = '未同期・失敗したPDFをOpenAIのベクトルストアへ同期します';
 
     public function handle(VectorStoreService $service): int
     {

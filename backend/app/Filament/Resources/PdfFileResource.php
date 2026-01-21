@@ -180,15 +180,15 @@ class PdfFileResource extends Resource
             ])
             ->actions([
                 Tables\Actions\Action::make('sync')
-                    ->label(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? 'AI再同期' : 'AI同期実行')
+                    ->label(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? 'ベクトルストアと再同期' : 'ベクトルストアと同期')
                     ->tooltip('このファイルをAIが読み込めるように（Vector Storeへ）転送します。')
                     ->icon('heroicon-o-cloud-arrow-up')
                     ->color(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? 'gray' : 'success')
                     ->requiresConfirmation()
-                    ->modalHeading(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? '再同期の確認' : 'AI同期の実行')
+                    ->modalHeading(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? '再同期の確認' : 'ベクトルストア同期の実行')
                     ->modalDescription(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed'
                         ? 'このファイルは既に同期済みです。再同期するとOpenAI側に新しいファイルが追加されます。よろしいですか？'
-                        : 'このファイルをOpenAIのベクターストアに送信し、AIが検索・利用できる状態にします。')
+                        : 'このファイルをOpenAIのベクトルストアに送信し、AIが検索・利用できる状態にします。')
                     ->action(function (\App\Models\PdfFile $record, \App\Services\VectorStoreService $service): void {
                         try {
                             $service->syncFile($record);
@@ -210,7 +210,7 @@ class PdfFileResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\BulkAction::make('syncSelected')
-                        ->label('選択したファイルをAI同期')
+                        ->label('選択したファイルをベクトルストアと同期')
                         ->icon('heroicon-o-cloud-arrow-up')
                         ->requiresConfirmation()
                         ->action(function (\Illuminate\Support\Collection $records, \App\Services\VectorStoreService $service): void {
