@@ -14,7 +14,7 @@ class ListPdfFiles extends ListRecords
     {
         return [
             Actions\Action::make('batchImport')
-                ->label('過去問PDFを一括でへDB登録')
+                ->label('過去問PDFを一括でDBへ登録')
                 ->tooltip('raw_pdfsフォルダ内のPDFをスキャンして新着分をDBに登録します。')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('info')
