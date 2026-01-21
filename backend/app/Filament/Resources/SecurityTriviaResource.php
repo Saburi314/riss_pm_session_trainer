@@ -20,19 +20,23 @@ class SecurityTriviaResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-information-circle';
     protected static ?string $navigationLabel = '豆知識管理';
     protected static ?string $modelLabel = '豆知識';
+    protected static ?string $pluralModelLabel = '豆知識管理';
+    protected static ?int $navigationSort = 40;
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Textarea::make('content')
+                    ->label('内容')
                     ->required()
                     ->columnSpanFull(),
-                Forms\Components\Select::make('category')
+                Forms\Components\Select::make('category_id')
+                    ->relationship('category', 'name')
                     ->label('カテゴリー')
-                    ->options(\App\Models\Category::pluck('name', 'code'))
                     ->required()
-                    ->searchable(),
+                    ->searchable()
+                    ->preload(),
             ]);
     }
 
@@ -41,15 +45,20 @@ class SecurityTriviaResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('content')
-                    ->limit(50)
+                    ->label('内容')
+                    ->wrap()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('category')
-                    ->searchable(),
+                Tables\Columns\TextColumn::make('category.name')
+                    ->label('カテゴリー')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
+                    ->label('作成日')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
+                    ->label('更新日')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

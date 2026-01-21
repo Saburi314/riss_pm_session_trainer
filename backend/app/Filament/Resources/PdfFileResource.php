@@ -10,6 +10,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -20,6 +21,8 @@ class PdfFileResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-document-duplicate';
     protected static ?string $navigationLabel = 'PDFソース管理';
     protected static ?string $modelLabel = 'PDFファイル';
+    protected static ?string $pluralModelLabel = 'PDFソース管理';
+    protected static ?int $navigationSort = 30;
 
     public static function form(Form $form): Form
     {
@@ -28,6 +31,7 @@ class PdfFileResource extends Resource
                 Forms\Components\Section::make('PDFファイル情報')
                     ->schema([
                         Forms\Components\TextInput::make('filename')
+                            ->label('ファイル名')
                             ->nullable()
                             ->maxLength(255)
                             ->placeholder('空欄の場合はファイル名が使用されます'),
@@ -38,6 +42,7 @@ class PdfFileResource extends Resource
                             ->required()
                             ->preserveFilenames(),
                         Forms\Components\TextInput::make('storage_disk')
+                            ->label('ストレージディスク')
                             ->required()
                             ->maxLength(255)
                             ->default('local'),
@@ -48,15 +53,18 @@ class PdfFileResource extends Resource
                 Forms\Components\Section::make('メタデータ')
                     ->schema([
                         Forms\Components\TextInput::make('year')
+                            ->label('年')
                             ->required()
                             ->numeric(),
                         Forms\Components\Select::make('season')
+                            ->label('時期')
                             ->options([
                                 'spring' => '春',
                                 'autumn' => '秋',
                             ])
                             ->required(),
                         Forms\Components\Select::make('exam_period')
+                            ->label('試験区分')
                             ->options([
                                 'am2' => '午前II',
                                 'pm1' => '午後I',
@@ -65,6 +73,7 @@ class PdfFileResource extends Resource
                             ])
                             ->required(),
                         Forms\Components\Select::make('doc_type')
+                            ->label('資料種別')
                             ->options([
                                 'question' => '問題',
                                 'answer' => '解答',
@@ -76,20 +85,25 @@ class PdfFileResource extends Resource
                 Forms\Components\Section::make('同期ステータス')
                     ->schema([
                         Forms\Components\TextInput::make('openai_file_id')
+                            ->label('OpenAIファイルID')
                             ->disabled()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('vector_store_file_id')
+                            ->label('ベクトルストアファイルID')
                             ->disabled()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('index_status')
+                            ->label('インデックス状況')
                             ->disabled()
                             ->maxLength(20)
                             ->default('pending'),
                         Forms\Components\DateTimePicker::make('indexed_at')
+                            ->label('インデックス日時')
                             ->disabled(),
                     ])->columns(2),
 
                 Forms\Components\Textarea::make('error_message')
+                    ->label('エラーメッセージ')
                     ->disabled()
                     ->columnSpanFull(),
             ]);
@@ -100,46 +114,116 @@ class PdfFileResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('filename')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('storage_disk')
+                    ->label('ファイル名')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('storage_path')
-                    ->searchable(),
+                    ->label('パス')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('size')
+                    ->label('サイズ')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('year')
+                    ->label('年')
                     ->numeric()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('season'),
-                Tables\Columns\TextColumn::make('exam_period'),
-                Tables\Columns\TextColumn::make('doc_type'),
-                Tables\Columns\TextColumn::make('openai_file_id')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('vector_store_file_id')
-                    ->searchable(),
+                Tables\Columns\TextColumn::make('season')
+                    ->label('時期')
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                        'spring' => '春',
+                        'autumn' => '秋',
+                        default => $state,
+                    }),
+                Tables\Columns\TextColumn::make('exam_period')
+                    ->label('試験区分')
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                        'am2' => '午前II',
+                        'pm1' => '午後I',
+                        'pm2' => '午後II',
+                        'pm' => '午後',
+                        default => $state,
+                    }),
+                Tables\Columns\TextColumn::make('doc_type')
+                    ->label('資料種別')
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                        'question' => '問題',
+                        'answer' => '解答',
+                        'commentary' => '解説',
+                        default => $state,
+                    }),
                 Tables\Columns\TextColumn::make('index_status')
+                    ->label('状況')
+                    ->badge()
+                    ->color(fn(string $state): string => match ($state) {
+                        'completed' => 'success',
+                        'pending' => 'warning',
+                        'failed' => 'danger',
+                        default => 'gray',
+                    })
                     ->searchable(),
                 Tables\Columns\TextColumn::make('indexed_at')
+                    ->label('完了日')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('index_status')
+                    ->label('状況')
+                    ->options([
+                        'pending' => '未処理',
+                        'completed' => '完了',
+                        'failed' => '失敗',
+                        'in_progress' => '処理中',
+                    ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('sync')
+                    ->label(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? 'AI再同期' : 'AI同期実行')
+                    ->tooltip('このファイルをAIが読み込めるように（Vector Storeへ）転送します。')
+                    ->icon('heroicon-o-cloud-arrow-up')
+                    ->color(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? 'gray' : 'success')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? '再同期の確認' : 'AI同期の実行')
+                    ->modalDescription(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed'
+                        ? 'このファイルは既に同期済みです。再同期するとOpenAI側に新しいファイルが追加されます。よろしいですか？'
+                        : 'このファイルをOpenAIのベクターストアに送信し、AIが検索・利用できる状態にします。')
+                    ->action(function (\App\Models\PdfFile $record, \App\Services\VectorStoreService $service): void {
+                        try {
+                            $service->syncFile($record);
+                            \Filament\Notifications\Notification::make()
+                                ->title('同期成功')
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('同期失敗')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('syncSelected')
+                        ->label('選択したファイルをAI同期')
+                        ->icon('heroicon-o-cloud-arrow-up')
+                        ->requiresConfirmation()
+                        ->action(function (\Illuminate\Support\Collection $records, \App\Services\VectorStoreService $service): void {
+                            $records->each(function ($record) use ($service) {
+                                if ($record->index_status !== 'completed') {
+                                    $service->syncFile($record);
+                                }
+                            });
+                            \Filament\Notifications\Notification::make()
+                                ->title('選択したファイルの同期が完了しました')
+                                ->success()
+                                ->send();
+                        }),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);

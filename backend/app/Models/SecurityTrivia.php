@@ -13,8 +13,13 @@ class SecurityTrivia extends Model
 
     protected $fillable = [
         'content',
-        'category',
+        'category_id',
     ];
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 
     /**
      * カテゴリに基づいてランダムなトリビアを取得
@@ -24,7 +29,10 @@ class SecurityTrivia extends Model
         $query = self::query();
 
         if ($categoryCode) {
-            $query->where('category', $categoryCode);
+            $category = Category::where('code', $categoryCode)->first();
+            if ($category) {
+                $query->where('category_id', $category->id);
+            }
         }
 
         return $query->inRandomOrder()->limit($limit)->get();

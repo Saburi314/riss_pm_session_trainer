@@ -18,9 +18,10 @@ class UserResource extends Resource
     protected static ?string $model = User::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
-    protected static ?string $navigationLabel = '管理ユーザー設定';
+    protected static ?string $navigationLabel = 'ユーザー設定';
     protected static ?string $modelLabel = 'ユーザー';
-
+    protected static ?string $pluralModelLabel = 'ユーザー設定';
+    protected static ?int $navigationSort = 50;
     public static function form(Form $form): Form
     {
         return $form
@@ -40,7 +41,6 @@ class UserResource extends Resource
                     ->maxLength(255),
             ]);
     }
-
     public static function table(Table $table): Table
     {
         return $table

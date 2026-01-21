@@ -13,9 +13,12 @@ class ListPdfFiles extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('過去問PDFを個別に登録')
+                ->icon('heroicon-o-plus'),
             Actions\Action::make('batchImport')
-                ->label('サーバーから一括インポート')
+                ->label('過去問PDFを一括登録')
+                ->tooltip('raw_pdfsフォルダ内のPDFをスキャンして新着分を登録します。')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('info')
                 ->requiresConfirmation()
@@ -29,44 +32,49 @@ class ListPdfFiles extends ListRecords
 
                     if ($exitCode === 0) {
                         \Filament\Notifications\Notification::make()
-                            ->title('インポート完了')
+                            ->title('スキャン完了')
+                            ->body('新しいPDFがデータベースに登録されました。')
                             ->success()
                             ->send();
                     } else {
                         \Filament\Notifications\Notification::make()
-                            ->title('インポート失敗')
+                            ->title('スキャン失敗')
                             ->danger()
                             ->send();
                     }
                 }),
             Actions\Action::make('syncVectorStore')
-                ->label('OpenAIと同期')
+                ->label('ベクターストアと同期')
+                ->tooltip('DBの未同期ファイルをAIエンジン（Vector Store）に転送します。')
                 ->icon('heroicon-o-cloud-arrow-up')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalDescription('DBに登録済みで、まだOpenAIにアップロードされていないファイルを同期します。')
+                ->modalHeading('AIベクターストアへの同期')
+                ->modalDescription('まだAIへ送信されていないファイルをすべて転送します。')
                 ->action(function () {
                     $exitCode = \Illuminate\Support\Facades\Artisan::call('vs:sync');
 
                     if ($exitCode === 0) {
                         \Filament\Notifications\Notification::make()
-                            ->title('同期完了')
+                            ->title('AI同期完了')
+                            ->body('ファイルがAIに認識されるようになりました。')
                             ->success()
                             ->send();
                     } else {
                         \Filament\Notifications\Notification::make()
-                            ->title('同期失敗')
+                            ->title('AI同期失敗')
                             ->danger()
                             ->send();
                     }
                 }),
             Actions\Action::make('initVectorStore')
-                ->label('新規VectorStore作成')
-                ->icon('heroicon-o-plus-circle')
-                ->color('danger')
+                ->label('新規ベクターストア作成')
+                ->tooltip('OpenAI側に新しいAIデータ保存領域（Vector Store）を作成します。')
+                ->icon('heroicon-o-sparkles')
+                ->color('gray')
                 ->requiresConfirmation()
-                ->modalHeading('新しいVector Storeの作成')
-                ->modalDescription('OpenAI側に新しいVector Storeを作成します。実行後、表示されるIDを.envに手動で設定する必要があります。よろしいですか？')
+                ->modalHeading('新しいAIストアの作成')
+                ->modalDescription('OpenAI側に新しいVector Storeを作成します。作成されたIDは通知されます。')
                 ->action(function () {
                     $output = new \Symfony\Component\Console\Output\BufferedOutput();
                     $exitCode = \Illuminate\Support\Facades\Artisan::call('vs:init', [], $output);
@@ -76,7 +84,7 @@ class ListPdfFiles extends ListRecords
                     if ($exitCode === 0) {
                         \Filament\Notifications\Notification::make()
                             ->title('作成成功')
-                            ->body($message)
+                            ->body("新しいストアが作成されました：\n" . $message)
                             ->success()
                             ->persistent()
                             ->send();

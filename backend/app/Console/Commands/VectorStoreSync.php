@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\PdfFile;
+use App\Services\VectorStoreService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
 
 class VectorStoreSync extends Command
 {
@@ -15,24 +15,8 @@ class VectorStoreSync extends Command
 
     protected $description = 'Sync pending/failed PDFs to OpenAI Vector Store';
 
-    private string $apiKey;
-    private string $vectorStoreId;
-
-    public function handle(): int
+    public function handle(VectorStoreService $service): int
     {
-        $this->apiKey = (string) config('services.openai.api_key');
-        $this->vectorStoreId = (string) config('services.openai.vector_store_id');
-
-        if (!$this->apiKey) {
-            $this->error('OPENAI_API_KEY is not set.');
-            return self::FAILURE;
-        }
-
-        if (!$this->vectorStoreId) {
-            $this->error('OPENAI_VECTOR_STORE_ID is not set.');
-            return self::FAILURE;
-        }
-
         $dryRun = $this->option('dry-run');
         $retry = $this->option('retry');
         $limit = (int) $this->option('limit');
@@ -77,7 +61,7 @@ class VectorStoreSync extends Command
             $this->line("Processing: {$pdfFile->filename}");
 
             try {
-                $this->syncFile($pdfFile);
+                $service->syncFile($pdfFile);
                 $successCount++;
                 $this->info("  ✓ Synced successfully");
             } catch (\Exception $e) {
@@ -90,123 +74,5 @@ class VectorStoreSync extends Command
         $this->info("Sync completed: {$successCount} success, {$errorCount} error(s).");
 
         return $errorCount > 0 ? self::FAILURE : self::SUCCESS;
-    }
-
-    private function syncFile(PdfFile $pdfFile): void
-    {
-        try {
-            $openaiFileId = $this->uploadToFilesApi($pdfFile);
-            $this->line("  → Files API: {$openaiFileId}");
-
-            $result = $this->addToVectorStore($openaiFileId, $pdfFile);
-            $this->line("  → Vector Store: {$result['id']} (status: {$result['status']})");
-
-            $pdfFile->update([
-                'openai_file_id' => $openaiFileId,
-                'vector_store_file_id' => $result['id'],
-                'index_status' => $result['status'],
-                'indexed_at' => $result['status'] === 'completed' ? now() : null,
-                'error_message' => $result['error_message'],
-            ]);
-
-        } catch (\Exception $e) {
-            $pdfFile->update([
-                'index_status' => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
-    }
-
-    private function uploadToFilesApi(PdfFile $pdfFile): string
-    {
-        $filePath = $pdfFile->getFullStoragePath();
-
-        if (!file_exists($filePath)) {
-            throw new \RuntimeException("File not found: {$filePath}");
-        }
-
-        $response = Http::timeout(120)
-            ->withToken($this->apiKey)
-            ->attach('file', file_get_contents($filePath), $pdfFile->filename)
-            ->post('https://api.openai.com/v1/files', [
-                'purpose' => 'assistants',
-            ]);
-
-        if (!$response->ok()) {
-            $error = $response->json('error.message') ?? $response->body();
-            throw new \RuntimeException("Files API error: {$error}");
-        }
-
-        return $response->json('id');
-    }
-
-    private function addToVectorStore(string $openaiFileId, PdfFile $pdfFile): array
-    {
-        $attributes = [
-            'year' => (string) $pdfFile->year,
-            'season' => $pdfFile->season,
-            'exam_period' => $pdfFile->exam_period,
-            'doc_type' => $pdfFile->doc_type,
-        ];
-
-        $response = Http::timeout(60)
-            ->withToken($this->apiKey)
-            ->post("https://api.openai.com/v1/vector_stores/{$this->vectorStoreId}/files", [
-                'file_id' => $openaiFileId,
-                'attributes' => $attributes,
-            ]);
-
-        if (!$response->ok()) {
-            $error = $response->json('error.message') ?? $response->body();
-            throw new \RuntimeException("Vector Store API error: {$error}");
-        }
-
-        $vectorStoreFileId = $response->json('id');
-        $status = $response->json('status');
-
-        if ($status !== 'completed') {
-            return $this->waitForCompletion($vectorStoreFileId);
-        }
-
-        return [
-            'id' => $vectorStoreFileId,
-            'status' => $status,
-            'error_message' => null,
-        ];
-    }
-
-    private function waitForCompletion(string $vectorStoreFileId): array
-    {
-        $maxAttempts = 15;
-
-        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
-            sleep(2);
-
-            $response = Http::timeout(30)
-                ->withToken($this->apiKey)
-                ->get("https://api.openai.com/v1/vector_stores/{$this->vectorStoreId}/files/{$vectorStoreFileId}");
-
-            if (!$response->ok()) {
-                continue;
-            }
-
-            $status = $response->json('status');
-            $this->line("  → Waiting... (status: {$status})");
-
-            if ($status === 'completed' || $status === 'failed' || $status === 'cancelled') {
-                return [
-                    'id' => $vectorStoreFileId,
-                    'status' => $status,
-                    'error_message' => $response->json('last_error.message'),
-                ];
-            }
-        }
-
-        return [
-            'id' => $vectorStoreFileId,
-            'status' => 'in_progress',
-            'error_message' => 'Timeout waiting for Vector Store processing',
-        ];
     }
 }

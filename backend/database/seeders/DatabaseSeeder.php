@@ -15,11 +15,24 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // 管理者アカウントの作成/更新
+        User::updateOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Admin User',
+                'password' => bcrypt('password'),
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // テストユーザーの作成/更新
+        User::updateOrCreate(
+            ['email' => 'test@example.com'],
+            ['name' => 'Test User']
+        );
+
+        $this->call([
+            CategorySeeder::class,
+            SecurityTriviaSeeder::class,
         ]);
     }
 }

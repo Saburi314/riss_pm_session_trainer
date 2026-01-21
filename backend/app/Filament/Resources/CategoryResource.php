@@ -18,17 +18,21 @@ class CategoryResource extends Resource
     protected static ?string $model = Category::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-tag';
-    protected static ?string $navigationLabel = 'カテゴリーマスター';
-    protected static ?string $modelLabel = 'カテゴリー';
+    protected static ?string $navigationLabel = 'カテゴリ管理';
+    protected static ?string $modelLabel = 'カテゴリ';
+    protected static ?string $pluralModelLabel = 'カテゴリ管理';
+    protected static ?int $navigationSort = 10;
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\TextInput::make('code')
+                    ->label('カテゴリコード')
                     ->required()
                     ->maxLength(255),
                 Forms\Components\TextInput::make('name')
+                    ->label('カテゴリ名')
                     ->required()
                     ->maxLength(255),
             ]);
@@ -39,8 +43,10 @@ class CategoryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
+                    ->label('コード')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('name')
+                    ->label('カテゴリ名')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
