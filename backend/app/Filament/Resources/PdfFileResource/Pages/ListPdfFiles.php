@@ -19,7 +19,7 @@ class ListPdfFiles extends ListRecords
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('info')
                 ->requiresConfirmation()
-                ->modalHeading('ディレクトリからのインポート')
+                ->modalHeading('原本ディレクトリからのインポート')
                 ->modalDescription('storage/app/raw_pdfs ディレクトリ内の全PDFをスキャンして登録します。既に登録済みのPDFはスキップされます。')
                 ->action(function () {
                     $exitCode = \Illuminate\Support\Facades\Artisan::call('pdf:batch-import', [
@@ -42,24 +42,24 @@ class ListPdfFiles extends ListRecords
                 }),
             Actions\Action::make('syncVectorStore')
                 ->label('ベクトルストアと一括同期')
-                ->tooltip('DBの未同期ファイルをAIエンジン（Vector Store）に転送します。')
+                ->tooltip('DBの未同期ファイルをベクトルストアに転送します。')
                 ->icon('heroicon-o-cloud-arrow-up')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalHeading('AIベクトルストアへの同期')
-                ->modalDescription('まだAIへ送信されていないファイルをすべて転送します。')
+                ->modalHeading('ベクトルストアへの同期')
+                ->modalDescription('まだベクトルストアへ送信されていないファイルをすべて転送します。')
                 ->action(function () {
                     $exitCode = \Illuminate\Support\Facades\Artisan::call('vs:sync');
 
                     if ($exitCode === 0) {
                         \Filament\Notifications\Notification::make()
-                            ->title('AI同期完了')
-                            ->body('ファイルがAIに認識されるようになりました。')
+                            ->title('ベクトルストア同期完了')
+                            ->body('ファイルがベクトルストアに認識されるようになりました。')
                             ->success()
                             ->send();
                     } else {
                         \Filament\Notifications\Notification::make()
-                            ->title('AI同期失敗')
+                            ->title('ベクトルストア同期失敗')
                             ->danger()
                             ->send();
                     }
