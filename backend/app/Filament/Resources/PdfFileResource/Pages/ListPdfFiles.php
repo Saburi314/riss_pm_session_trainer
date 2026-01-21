@@ -14,16 +14,16 @@ class ListPdfFiles extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('過去問PDFを個別に登録')
+                ->label('過去問PDFを個別でDBへ登録')
                 ->icon('heroicon-o-plus'),
             Actions\Action::make('batchImport')
-                ->label('過去問PDFを一括登録')
-                ->tooltip('raw_pdfsフォルダ内のPDFをスキャンして新着分を登録します。')
+                ->label('過去問PDFを一括でへDB登録')
+                ->tooltip('raw_pdfsフォルダ内のPDFをスキャンして新着分をDBに登録します。')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('info')
                 ->requiresConfirmation()
-                ->modalHeading('サーバーディレクトリからのインポート')
-                ->modalDescription('storage/app/raw_pdfs ディレクトリ内の全PDFをスキャンして登録します。既に登録済みのファイルはスキップされます。')
+                ->modalHeading('ディレクトリからのインポート')
+                ->modalDescription('storage/app/raw_pdfs ディレクトリ内の全PDFをスキャンして登録します。既に登録済みのPDFはスキップされます。')
                 ->action(function () {
                     $exitCode = \Illuminate\Support\Facades\Artisan::call('pdf:batch-import', [
                         'directory' => storage_path('app/raw_pdfs'),
