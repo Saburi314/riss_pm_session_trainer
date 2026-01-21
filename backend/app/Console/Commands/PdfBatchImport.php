@@ -149,16 +149,23 @@ class PdfBatchImport extends Command
     }
 
     /**
-     * Filename pattern: 2024r06h_sc_pm_qs.pdf
+     * Filename pattern examples:
+     * - 2009h21a_sc_am2_qs.pdf (2009年 平成21年 秋期)
+     * - 2010h22h_sc_pm1_ans.pdf (2010年 平成22年 春期)
+     * - 2011h23tokubetsu_sc_pm2_cmnt.pdf (2011年 平成23年 特別)
+     * - 2024r06h_sc_pm_qs.pdf (2024年 令和6年 春期)
+     * 
+     * Format: {西暦}{元号年}{時期}_sc_{試験区分}_{種別}.pdf
      */
     private function parseFilename(string $filename): ?array
     {
         // Regex pattern:
-        // 1: \d{4} - 西暦
-        // 2: [hao] - 時期 (h=spring, a=autumn, o=autumn/2020 special)
-        // 3: (am2|pm[12]?) - 区分
-        // 4: ([a-z0-9]+) - 種別 
-        $pattern = '/^(\d{4}).*?([hao]).*?_(am2|pm[12]?)_([a-z0-9]+)\.pdf$/i';
+        // 1: (\d{4}) - 西暦 (year)
+        // 2: [hr]\d+ - 元号年 (era year: h=平成, r=令和)
+        // 3: ([ha]|tokubetsu) - 時期 (season: h=春, a=秋, tokubetsu=特別)
+        // 4: (am2|pm[12]?) - 試験区分 (exam period)
+        // 5: ([a-z0-9]+) - 種別 (document type)
+        $pattern = '/^(\d{4})[hr]\d+([ha]|tokubetsu)_sc_(am2|pm[12]?)_([a-z0-9]+)\.pdf$/i';
 
         if (!preg_match($pattern, $filename, $matches)) {
             return null;
@@ -169,7 +176,17 @@ class PdfBatchImport extends Command
         $period = strtolower($matches[3]);
         $typeCode = strtolower($matches[4]);
 
-        $season = ($seasonCode === 'h') ? 'spring' : 'autumn';
+        // Map season codes to database values
+        // tokubetsu (特別) is treated as spring based on file organization
+        $season = match ($seasonCode) {
+            'h', 'tokubetsu' => 'spring',
+            'a' => 'autumn',
+            default => null
+        };
+
+        if ($season === null) {
+            return null;
+        }
 
         $docType = match ($typeCode) {
             'qs' => 'question',
