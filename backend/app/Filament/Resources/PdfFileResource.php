@@ -64,6 +64,7 @@ class PdfFileResource extends Resource
                             ->options([
                                 'spring' => '春',
                                 'autumn' => '秋',
+                                'special' => '特別',
                             ])
                             ->required(),
                         Forms\Components\Select::make('exam_period')
@@ -137,6 +138,7 @@ class PdfFileResource extends Resource
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'spring' => '春',
                         'autumn' => '秋',
+                        'special' => '特別',
                         default => $state,
                     }),
                 Tables\Columns\TextColumn::make('exam_period')

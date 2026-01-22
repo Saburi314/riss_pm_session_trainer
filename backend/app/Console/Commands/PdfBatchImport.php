@@ -162,10 +162,10 @@ class PdfBatchImport extends Command
         // Regex pattern:
         // 1: (\d{4}) - 西暦 (year)
         // 2: [hr]\d+ - 元号年 (era year: h=平成, r=令和)
-        // 3: ([ha]|tokubetsu) - 時期 (season: h=春, a=秋, tokubetsu=特別)
+        // 3: ([hao]|tokubetsu) - 時期 (season: h=春, a=秋, o=2020年10月期, tokubetsu=特別)
         // 4: (am2|pm[12]?) - 試験区分 (exam period)
         // 5: ([a-z0-9]+) - 種別 (document type)
-        $pattern = '/^(\d{4})[hr]\d+([ha]|tokubetsu)_sc_(am2|pm[12]?)_([a-z0-9]+)\.pdf$/i';
+        $pattern = '/^(\d{4})[hr]\d+([hao]|tokubetsu)_sc_(am2|pm[12]?)_([a-z0-9]+)\.pdf$/i';
 
         if (!preg_match($pattern, $filename, $matches)) {
             return null;
@@ -177,10 +177,10 @@ class PdfBatchImport extends Command
         $typeCode = strtolower($matches[4]);
 
         // Map season codes to database values
-        // tokubetsu (特別) is treated as spring based on file organization
         $season = match ($seasonCode) {
-            'h', 'tokubetsu' => 'spring',
-            'a' => 'autumn',
+            'h' => 'spring',
+            'a', 'o' => 'autumn',
+            'tokubetsu' => 'special',
             default => null
         };
 
