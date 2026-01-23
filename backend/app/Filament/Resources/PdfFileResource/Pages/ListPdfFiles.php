@@ -10,6 +10,13 @@ class ListPdfFiles extends ListRecords
 {
     protected static string $resource = PdfFileResource::class;
 
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            PdfFileResource\Widgets\PdfFileSummary::class,
+        ];
+    }
+
     protected function getHeaderActions(): array
     {
         return [

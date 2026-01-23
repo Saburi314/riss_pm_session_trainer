@@ -173,6 +173,12 @@ class PdfFileResource extends Resource
                     ->dateTime()
                     ->sortable(),
             ])
+            ->groups([
+                Tables\Grouping\Group::make('year')
+                    ->label('年度')
+                    ->collapsible(),
+            ])
+            ->defaultGroup('year')
             ->filters([
                 Tables\Filters\SelectFilter::make('index_status')
                     ->label('状況')
