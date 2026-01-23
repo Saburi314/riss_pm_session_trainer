@@ -289,6 +289,63 @@ button.secondary:hover {
   font-weight: 700;
 }
 
+.loading-progress-container {
+  margin-bottom: 32px;
+  width: 100%;
+}
+
+.loading-progress-track {
+  width: 100%;
+  height: 12px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.loading-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  box-shadow: 0 0 15px rgba(79, 70, 229, 0.4);
+}
+
+.loading-progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent);
+  animation: shimmer 2s infinite;
+}
+
+.loading-progress-percent {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--primary);
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .trivia-box {
   background: #f0fdfa;
   border-left: 6px solid #14b8a6;

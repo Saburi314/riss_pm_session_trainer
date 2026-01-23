@@ -6,16 +6,26 @@ export class UIManager {
         this.loadingTitle = document.getElementById('loading-title');
         this.loadingStatus = document.getElementById('loading-status');
         this.timerCount = document.getElementById('timer-count');
+        this.progressBar = document.getElementById('loading-progress-bar');
+        this.progressPercent = document.getElementById('loading-progress-percent');
         this.timerInterval = null;
+        this.progressInterval = null;
         this.seconds = 0;
+        this.progress = 0;
     }
 
     startLoading(mode) {
         if (!this.loadingOverlay) return;
 
+        this.progressBar = this.progressBar || document.getElementById('loading-progress-bar');
+        this.progressPercent = this.progressPercent || document.getElementById('loading-progress-percent');
+
         this.loadingOverlay.classList.add('active');
         this.seconds = 0;
+        this.progress = 0;
+        this.mode = mode; // 保持
         if (this.timerCount) this.timerCount.textContent = '0';
+        this.updateProgress(0);
 
         if (this.timerInterval) clearInterval(this.timerInterval);
         this.timerInterval = setInterval(() => {
@@ -23,19 +33,92 @@ export class UIManager {
             if (this.timerCount) this.timerCount.textContent = this.seconds;
         }, APP_CONFIG.TIMER_INTERVAL);
 
+        if (this.progressInterval) clearInterval(this.progressInterval);
+        this.progressInterval = setInterval(() => {
+            this.simulateProgress();
+        }, APP_CONFIG.PROGRESS_UPDATE_INTERVAL);
+
+        this.updateLoadingTitle(mode);
+    }
+
+    updateLoadingTitle(mode) {
+        if (!this.loadingTitle) return;
         if (mode === 'generate') {
-            if (this.loadingTitle) this.loadingTitle.textContent = "問題を生成しています...";
-            if (this.loadingStatus) this.loadingStatus.textContent = "過去問データベース検索中 / シナリオ構築中...";
+            this.loadingTitle.textContent = "問題を生成しています...";
         } else if (mode === 'score') {
-            if (this.loadingTitle) this.loadingTitle.textContent = "採点しています...";
-            if (this.loadingStatus) this.loadingStatus.textContent = "採点基準との照合中 / 講評作成中...";
+            this.loadingTitle.textContent = "採点しています...";
         }
     }
 
     stopLoading() {
         if (!this.loadingOverlay) return;
-        this.loadingOverlay.classList.remove('active');
-        clearInterval(this.timerInterval);
+
+        // 100%まで滑らかに飛ばす
+        clearInterval(this.progressInterval);
+        const finishStep = (100 - this.progress) / 10;
+        let count = 0;
+
+        const finishInterval = setInterval(() => {
+            this.progress += finishStep;
+            this.updateProgress(Math.min(this.progress, 100));
+            count++;
+
+            if (count >= 10 || this.progress >= 100) {
+                clearInterval(finishInterval);
+                setTimeout(() => {
+                    this.loadingOverlay.classList.remove('active');
+                    clearInterval(this.timerInterval);
+                }, 400);
+            }
+        }, 50);
+    }
+
+    simulateProgress() {
+        const stages = APP_CONFIG?.PROGRESS_STAGES;
+        if (!stages) return;
+
+        let currentStage = null;
+
+        if (this.progress < stages.SEARCH.max) {
+            currentStage = stages.SEARCH;
+        } else if (this.progress < stages.ANALYZE.max) {
+            currentStage = stages.ANALYZE;
+        } else if (this.progress < stages.DRAFT.max) {
+            currentStage = stages.DRAFT;
+        } else {
+            currentStage = stages.FINALIZE;
+        }
+
+        // 基本の増分 (ランダム性を加味)
+        let increment = Math.random() * currentStage.speed;
+
+        // 漸近的ロジック: 100%に近づくほど増分にブレーキをかける
+        const remaining = 100 - this.progress;
+        const asymptoticFactor = Math.max(remaining / 80, 0.1);
+        increment *= asymptoticFactor;
+
+        // 最低速度保証 (1回の更新で少なくとも0.05%は進む)
+        increment = Math.max(increment, 0.05);
+
+        if (this.loadingStatus && currentStage) {
+            const text = currentStage.text[this.mode] || currentStage.text.generate;
+            this.loadingStatus.textContent = text;
+        }
+
+        this.progress += increment;
+
+        // 99%を超えたら極限まで減速
+        if (this.progress >= 99.5) {
+            this.progress = 99.5;
+        }
+
+        this.updateProgress(this.progress);
+    }
+
+    updateProgress(val) {
+        const rounded = Math.floor(val);
+        if (this.progressBar) this.progressBar.style.width = `${rounded}%`;
+        if (this.progressPercent) this.progressPercent.textContent = `${rounded}%`;
     }
 
     syncSubcategories(categorySelect, subcategorySelect, categories, defaultLabels) {

@@ -29,12 +29,18 @@
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay">
       <div class="loading-content">
-        <div class="loading-spinner"></div>
         <h2 id="loading-title">問題を生成しています</h2>
         <p id="loading-status" class="loading-status">過去問データベースを検索中...</p>
 
         <div class="loading-timer">
           <span id="timer-count">0</span>秒
+        </div>
+
+        <div class="loading-progress-container">
+          <div class="loading-progress-track">
+            <div id="loading-progress-bar" class="loading-progress-bar"></div>
+          </div>
+          <div id="loading-progress-percent" class="loading-progress-percent">0%</div>
         </div>
 
         <div class="trivia-box">
