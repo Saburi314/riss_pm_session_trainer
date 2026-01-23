@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const resultHtml = `
             <div id="score-result-card" class="card score-result-card">
               <div id="score-badge-container"></div>
-              <div class="score-label">Result Score</div>
+              <div class="score-label">今回の得点</div>
               <div id="scoring-content" class="markdown-body scoring-content"></div>
             </div>`;
 

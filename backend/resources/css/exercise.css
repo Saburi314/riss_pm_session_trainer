@@ -119,14 +119,16 @@ button.secondary:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 120px;
-  height: 120px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
-  font-size: 48px;
+  font-size: 56px;
   font-weight: 900;
   color: white;
   margin: 0 auto 16px;
   position: relative;
+  /* 文字の影を付けてさらにプレミアムに */
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .score-label {
@@ -405,10 +407,13 @@ select:focus {
 
 .score-badge::after {
   content: '点';
-  font-size: 16px;
-  margin-left: 4px;
-  align-self: flex-end;
-  margin-bottom: 12px;
+  position: absolute;
+  right: 15px;
+  bottom: 25px;
+  font-size: 18px;
+  font-weight: 700;
+  opacity: 0.9;
+  z-index: 2;
 }
 
 /* Animations */
