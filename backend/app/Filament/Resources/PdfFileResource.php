@@ -191,17 +191,17 @@ class PdfFileResource extends Resource
             ])
             ->actions([
                 Tables\Actions\Action::make('sync')
-                    ->label(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? 'ベクトルストアと再同期' : 'ベクトルストアと同期')
+                    ->label('ベクトルストアと同期')
                     ->tooltip('このファイルをAIが読み込めるように（Vector Storeへ）転送します。')
                     ->icon('heroicon-o-cloud-arrow-up')
-                    ->color(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? 'gray' : 'success')
+                    ->color('success')
+                    ->visible(fn(\App\Models\PdfFile $record): bool => $record->index_status !== 'completed')
                     ->requiresConfirmation()
-                    ->modalHeading(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed' ? '再同期の確認' : 'ベクトルストア同期の実行')
-                    ->modalDescription(fn(\App\Models\PdfFile $record): string => $record->index_status === 'completed'
-                        ? 'このファイルは既に同期済みです。再同期するとOpenAI側に新しいファイルが追加されます。よろしいですか？'
-                        : 'このファイルをOpenAIのベクトルストアに送信し、AIが検索・利用できる状態にします。')
+                    ->modalHeading('ベクトルストア同期の実行')
+                    ->modalDescription('このファイルをOpenAIのベクトルストアに送信し、AIが検索・利用できる状態にします。')
                     ->action(function (\App\Models\PdfFile $record, \App\Services\VectorStoreService $service): void {
                         try {
+                            set_time_limit(600); // 10分まで実行を許可
                             $service->syncFile($record);
                             \Filament\Notifications\Notification::make()
                                 ->title('同期成功')
@@ -225,6 +225,7 @@ class PdfFileResource extends Resource
                         ->icon('heroicon-o-cloud-arrow-up')
                         ->requiresConfirmation()
                         ->action(function (\Illuminate\Support\Collection $records, \App\Services\VectorStoreService $service): void {
+                            set_time_limit(0); // 無制限
                             $records->each(function ($record) use ($service) {
                                 if ($record->index_status !== 'completed') {
                                     $service->syncFile($record);

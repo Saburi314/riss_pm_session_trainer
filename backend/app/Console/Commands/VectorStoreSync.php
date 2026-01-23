@@ -10,24 +10,18 @@ class VectorStoreSync extends Command
 {
     protected $signature = 'vs:sync
                             {--dry-run : 実際にはアップロードせず、対象ファイルを表示のみ}
-                            {--limit=10 : 一度に処理する最大件数}
-                            {--retry : failed や cancelled のファイルも対象にする}';
+                            {--limit=1000 : 一度に処理する最大件数}';
 
     protected $description = '未同期・失敗したPDFをOpenAIのベクトルストアへ同期します';
 
     public function handle(VectorStoreService $service): int
     {
         $dryRun = $this->option('dry-run');
-        $retry = $this->option('retry');
         $limit = (int) $this->option('limit');
 
         // 同期対象のPDFを取得
         $query = PdfFile::query();
-        if ($retry) {
-            $query->whereIn('index_status', ['pending', 'failed', 'cancelled']);
-        } else {
-            $query->where('index_status', 'pending');
-        }
+        $query->whereIn('index_status', ['pending', 'failed', 'cancelled', 'in_progress']);
 
         $pendingFiles = $query->limit($limit)->get();
 

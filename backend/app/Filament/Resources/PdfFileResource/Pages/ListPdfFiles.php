@@ -54,9 +54,14 @@ class ListPdfFiles extends ListRecords
                 ->color('warning')
                 ->requiresConfirmation()
                 ->modalHeading('ベクトルストアへの同期')
-                ->modalDescription('まだベクトルストアへ送信されていないファイルをすべて転送します。')
+                ->modalDescription('まだ同期されていないファイルや、前回失敗・タイムアウトしたファイルをすべて転送します。')
                 ->action(function () {
-                    $exitCode = \Illuminate\Support\Facades\Artisan::call('vs:sync');
+                    // 大量のファイルを同期する場合に備えてタイムアウトを無効化
+                    set_time_limit(0);
+
+                    $exitCode = \Illuminate\Support\Facades\Artisan::call('vs:sync', [
+                        '--limit' => 1000,
+                    ]);
 
                     if ($exitCode === 0) {
                         \Filament\Notifications\Notification::make()
