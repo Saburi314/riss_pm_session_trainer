@@ -17,13 +17,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const answerArea = document.getElementById('user_answer');
     const countBox = document.getElementById('segment-counters');
 
-    // Initialization
+    const urlParams = new URLSearchParams(window.location.search);
     if (categorySelect) {
+        // 先にURLパラメータをチェック
+        const paramCategory = urlParams.get(APP_CONFIG.PARAMS.CATEGORY);
+        const paramSubcategory = urlParams.get(APP_CONFIG.PARAMS.SUBCATEGORY);
+
+        if (paramCategory !== null) {
+            categorySelect.value = paramCategory;
+        }
+
         categorySelect.addEventListener('change', () => {
             ui.syncSubcategories(categorySelect, subcategorySelect, categories, { defaultLabel, noSelectionLabel });
         });
         ui.syncSubcategories(categorySelect, subcategorySelect, categories, { defaultLabel, noSelectionLabel });
-        if (currentSubcategory) subcategorySelect.value = currentSubcategory;
+
+        if (paramSubcategory !== null) {
+            subcategorySelect.value = paramSubcategory;
+            if (paramSubcategory !== "") subcategorySelect.disabled = false;
+        } else if (currentSubcategory) {
+            subcategorySelect.value = currentSubcategory;
+            subcategorySelect.disabled = false;
+        }
     }
 
     if (answerArea) {
@@ -31,7 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.updateCharacterCounter(answerArea, countBox);
     }
 
-    // Form Submissions
     if (generateForm) {
         generateForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -40,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
             trivia.start(APP_CONFIG.TRIVIA_INTERVAL);
 
             try {
-                const data = await api.postGenerate(generateForm.action, new FormData(generateForm));
+                const data = await api.post(generateForm.action, new FormData(generateForm));
                 renderExerciseResult(data);
             } catch (error) {
                 console.error(error);
@@ -60,7 +74,11 @@ document.addEventListener('DOMContentLoaded', () => {
             trivia.start(APP_CONFIG.TRIVIA_INTERVAL);
 
             try {
-                const data = await api.postScore(scoreForm.action, new FormData(scoreForm));
+                const formData = new FormData(scoreForm);
+                if (window.RissApp.currentLogId) {
+                    formData.append('log_id', window.RissApp.currentLogId);
+                }
+                const data = await api.post(scoreForm.action, formData);
                 renderScoreResult(data);
             } catch (error) {
                 console.error(error);
@@ -72,12 +90,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Result Rendering
     function renderExerciseResult(data) {
         const contentDiv = document.getElementById('exercise-content');
         if (contentDiv) {
             contentDiv.innerHTML = parseMarkdown(data.exerciseText);
             document.getElementById('exercise-card').classList.remove('hidden');
+        }
+
+        if (data.log_id) {
+            window.RissApp.currentLogId = data.log_id;
         }
 
         const form = document.getElementById('form-score');
@@ -95,39 +116,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderScoreResult(data) {
-        let scoreContainer = document.getElementById('scoring-content');
-        if (!scoreContainer) {
-            const anchor = document.getElementById('score-result-anchor');
+        const scoreCard = document.getElementById('score-result-card');
+        const scoreContainer = document.getElementById('scoring-content');
 
-            const resultHtml = `
-            <div id="score-result-card" class="card score-result-card">
-              <div id="score-badge-container"></div>
-              <div class="score-label">今回の得点</div>
-              <div id="scoring-content" class="markdown-body scoring-content"></div>
-            </div>`;
-
-            anchor.insertAdjacentHTML('beforebegin', resultHtml);
-            scoreContainer = document.getElementById('scoring-content');
-        }
+        if (!scoreCard || !scoreContainer) return;
 
         const match = (data.scoringResult || '').match(/点数：(\d+)/);
         const scoreValue = match ? parseInt(match[1]) : 0;
-        const scoreColor = scoreValue >= 80 ? '#48bb78' : (scoreValue >= 60 ? '#ecc94b' : '#f6ad55');
 
-        const scoreCard = scoreContainer.closest('.card');
-        scoreCard.id = 'score-result-card';
-        scoreCard.classList.remove('hidden');
-
-        let badge = scoreCard.querySelector('.score-badge');
-        if (!badge) {
-            badge = document.createElement('div');
-            badge.className = 'score-badge';
-            scoreCard.insertBefore(badge, scoreCard.querySelector('.score-label'));
+        let scoreColor = APP_CONFIG.SCORING.COLORS.BRONZE;
+        if (scoreValue >= APP_CONFIG.SCORING.THRESHOLDS.GOLD) {
+            scoreColor = APP_CONFIG.SCORING.COLORS.GOLD;
+        } else if (scoreValue >= APP_CONFIG.SCORING.THRESHOLDS.SILVER) {
+            scoreColor = APP_CONFIG.SCORING.COLORS.SILVER;
         }
 
-        badge.style.background = scoreColor;
-        badge.style.boxShadow = `0 10px 25px ${scoreColor}66`;
-        badge.textContent = scoreValue;
+        scoreCard.classList.remove('hidden');
+
+        const badge = scoreCard.querySelector('.score-badge');
+        if (badge) {
+            badge.style.background = scoreColor;
+            badge.style.boxShadow = `0 10px 25px ${scoreColor}66`;
+            badge.textContent = scoreValue;
+        }
 
         const label = scoreCard.querySelector('.score-label');
         if (label) label.style.color = scoreColor;
@@ -136,12 +147,52 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreCard.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // Initial Display (if data exists)
     if (exerciseRaw) {
-        document.getElementById('exercise-content').innerHTML = parseMarkdown(exerciseRaw);
-        document.getElementById('exercise-card').classList.remove('hidden');
-        document.getElementById('answer-card').classList.remove('hidden');
+        renderExerciseResult({ exerciseText: exerciseRaw, category: window.RissApp.currentCategory, subcategory: currentSubcategory });
+    } else {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get(APP_CONFIG.PARAMS.RETAKE) === '1') {
+            const retakeExercise = sessionStorage.getItem(APP_CONFIG.SESSION_KEYS.RETAKE_EXERCISE);
+            const retakeCategory = sessionStorage.getItem(APP_CONFIG.SESSION_KEYS.RETAKE_CATEGORY);
+            const retakeSubcategory = sessionStorage.getItem(APP_CONFIG.SESSION_KEYS.RETAKE_SUBCATEGORY);
+
+            if (retakeExercise) {
+                renderExerciseResult({
+                    exerciseText: retakeExercise,
+                    category: retakeCategory,
+                    subcategory: retakeSubcategory
+                });
+
+                (async () => {
+                    try {
+                        const formData = new FormData();
+                        const token = document.querySelector('input[name="_token"]')?.value || '';
+                        formData.append('_token', token);
+                        formData.append('category', retakeCategory || '');
+                        formData.append('subcategory', retakeSubcategory || '');
+                        formData.append('exercise_text', retakeExercise);
+
+                        const res = await api.post('/exercise/record-generation', formData);
+                        if (res.log_id) {
+                            window.RissApp.currentLogId = res.log_id;
+                        }
+                    } catch (e) {
+                        console.error('Failed to log retake attempt', e);
+                    }
+                })();
+
+                if (categorySelect && retakeCategory) {
+                    categorySelect.value = retakeCategory;
+                    ui.syncSubcategories(categorySelect, subcategorySelect, categories, { defaultLabel, noSelectionLabel });
+                    if (subcategorySelect && retakeSubcategory) {
+                        subcategorySelect.value = retakeSubcategory;
+                        subcategorySelect.disabled = false;
+                    }
+                }
+            }
+        }
     }
+
     if (scoringRaw) {
         renderScoreResult({ scoringResult: scoringRaw });
     }

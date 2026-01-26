@@ -3,7 +3,7 @@
  */
 export const APP_CONFIG = {
     // 豆知識の切り替え間隔 (ms)
-    TRIVIA_INTERVAL: 12000,
+    TRIVIA_INTERVAL: 15000,
 
     // 経過秒タイマーの更新間隔 (ms)
     TIMER_INTERVAL: 1000,
@@ -17,7 +17,7 @@ export const APP_CONFIG = {
     // プログレスの段階設定
     PROGRESS_STAGES: {
         SEARCH: {
-            max: 20, speed: 5.0,
+            max: 20, speed: 4.0,
             text: { generate: "過去問ナレッジベースを検索中...", score: "提出された解答を構文解析中..." }
         },
         ANALYZE: {
@@ -32,5 +32,32 @@ export const APP_CONFIG = {
             max: 99, speed: 0.8,
             text: { generate: "出力形式の最終調整および生成中...", score: "フィードバック結果を整理中..." }
         }
+    },
+
+    // 採点設定
+    SCORING: {
+        THRESHOLDS: {
+            GOLD: 80,
+            SILVER: 60
+        },
+        COLORS: {
+            GOLD: '#48bb78',   // green-500
+            SILVER: '#ecc94b', // yellow-500
+            BRONZE: '#f6ad55'  // orange-400
+        }
+    },
+
+    // セッションストレージのキー
+    SESSION_KEYS: {
+        RETAKE_EXERCISE: 'riss_retake_exercise',
+        RETAKE_CATEGORY: 'riss_retake_category',
+        RETAKE_SUBCATEGORY: 'riss_retake_subcategory'
+    },
+
+    // URLパラメータ
+    PARAMS: {
+        RETAKE: 'retake',
+        CATEGORY: 'category',
+        SUBCATEGORY: 'subcategory'
     }
 };
