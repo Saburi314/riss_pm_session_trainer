@@ -1,61 +1,90 @@
 import { UIManager } from './modules/ui.js';
 import { TriviaManager } from './modules/trivia.js';
-import { parseMarkdown, renderMermaid } from './modules/renderer.js';
+import { renderMermaid } from './modules/renderer.js';
 import * as api from './modules/api.js';
 import { APP_CONFIG } from './modules/constants.js';
+import { PastPaperSelector } from './modules/PastPaperSelector.js';
+import { ExerciseRenderer } from './modules/ExerciseRenderer.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    const { categories, currentSubcategory, defaultLabel, noSelectionLabel, exerciseRaw, scoringRaw } = window.RissApp || {};
+    const { mode, categories, pastPapers, currentSubcategory, defaultLabel, noSelectionLabel, exerciseRaw, scoringRaw } = window.RissApp || {};
 
     const ui = new UIManager();
     const trivia = new TriviaManager(document.getElementById('trivia-text'));
 
-    const categorySelect = document.getElementById('category');
-    const subcategorySelect = document.getElementById('subcategory');
-    const generateForm = document.getElementById('form-generate');
-    const scoreForm = document.getElementById('form-score');
-    const answerArea = document.getElementById('user_answer');
-    const countBox = document.getElementById('segment-counters');
+    const elements = {
+        categorySelect: document.getElementById('category'),
+        subcategorySelect: document.getElementById('subcategory'),
+        selectYear: document.getElementById('select-year'),
+        selectSeason: document.getElementById('select-season'),
+        selectPeriod: document.getElementById('select-period'),
+        btnLoadPaper: document.getElementById('btn-load-paper'),
+        generateForm: document.getElementById('form-generate'),
+        scoreForm: document.getElementById('form-score'),
+        answerArea: document.getElementById('user_answer'),
+        countBox: document.getElementById('segment-counters'),
+        dynamicFormContainer: document.getElementById('dynamic-form-container'),
+        exerciseContent: document.getElementById('exercise-content'),
+        exerciseCard: document.getElementById('exercise-card'),
+        pdfCard: document.getElementById('pdf-card'),
+        pdfViewer: document.getElementById('pdf-viewer'),
+        scoreResultCard: document.getElementById('score-result-card'),
+        scoringContent: document.getElementById('scoring-content'),
+        answerCard: document.getElementById('answer-card'),
+        pdfFileIdHidden: document.getElementById('pdf_file_id_hidden'),
+    };
 
-    const urlParams = new URLSearchParams(window.location.search);
-    if (categorySelect) {
-        // 先にURLパラメータをチェック
-        const paramCategory = urlParams.get(APP_CONFIG.PARAMS.CATEGORY);
-        const paramSubcategory = urlParams.get(APP_CONFIG.PARAMS.SUBCATEGORY);
+    const renderer = new ExerciseRenderer(elements);
+    const paperSelector = new PastPaperSelector({
+        selectYear: elements.selectYear,
+        selectSeason: elements.selectSeason,
+        selectPeriod: elements.selectPeriod,
+        pastPapers: pastPapers
+    });
 
-        if (paramCategory !== null) {
-            categorySelect.value = paramCategory;
-        }
-
-        categorySelect.addEventListener('change', () => {
-            ui.syncSubcategories(categorySelect, subcategorySelect, categories, { defaultLabel, noSelectionLabel });
+    // --- AI演習モードのカテゴリ同期 ---
+    if (elements.categorySelect) {
+        elements.categorySelect.addEventListener('change', () => {
+            ui.syncSubcategories(elements.categorySelect, elements.subcategorySelect, categories, { defaultLabel, noSelectionLabel });
         });
-        ui.syncSubcategories(categorySelect, subcategorySelect, categories, { defaultLabel, noSelectionLabel });
-
-        if (paramSubcategory !== null) {
-            subcategorySelect.value = paramSubcategory;
-            if (paramSubcategory !== "") subcategorySelect.disabled = false;
-        } else if (currentSubcategory) {
-            subcategorySelect.value = currentSubcategory;
-            subcategorySelect.disabled = false;
-        }
+        ui.syncSubcategories(elements.categorySelect, elements.subcategorySelect, categories, { defaultLabel, noSelectionLabel });
     }
 
-    if (answerArea) {
-        answerArea.addEventListener('input', () => ui.updateCharacterCounter(answerArea, countBox));
-        ui.updateCharacterCounter(answerArea, countBox);
-    }
-
-    if (generateForm) {
-        generateForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            ui.startLoading('generate');
-            await trivia.fetchTrivia(categorySelect.value);
-            trivia.start(APP_CONFIG.TRIVIA_INTERVAL);
+    // --- 過去問モードの読み込み ---
+    if (elements.btnLoadPaper && elements.selectPeriod) {
+        elements.btnLoadPaper.addEventListener('click', async () => {
+            const pdfId = elements.selectPeriod.value;
+            if (!pdfId) return alert('試験問題を選択してください');
 
             try {
-                const data = await api.post(generateForm.action, new FormData(generateForm));
-                renderExerciseResult(data);
+                ui.startLoading('paper');
+                const cat = elements.categorySelect ? elements.categorySelect.value : '';
+                await trivia.fetchTrivia(cat);
+                trivia.start(APP_CONFIG.TRIVIA_INTERVAL);
+
+                elements.pdfViewer.src = `/exercise/pdf/${pdfId}`;
+                elements.pdfCard.classList.remove('hidden');
+
+                const res = await api.get(`/exercise/form/${pdfId}`);
+                renderer.renderDynamicForm(res.form, pdfId);
+
+                const title = `過去問演習: ${elements.selectYear.options[elements.selectYear.selectedIndex].text} ${elements.selectSeason.options[elements.selectSeason.selectedIndex].text} ${elements.selectPeriod.options[elements.selectPeriod.selectedIndex].text}`;
+                elements.scoreForm.querySelector('[name="exercise_text"]').value = title;
+                elements.pdfFileIdHidden.value = pdfId;
+
+                elements.answerCard.classList.remove('hidden');
+                elements.exerciseCard.classList.add('hidden');
+
+                const recordData = new FormData();
+                const token = document.querySelector('input[name="_token"]')?.value || '';
+                recordData.append('_token', token);
+                recordData.append('pdf_file_id', pdfId);
+                recordData.append('exercise_text', title);
+
+                const recordRes = await api.post('/exercise/record-generation', recordData);
+                if (recordRes.log_id) {
+                    window.RissApp.currentLogId = recordRes.log_id;
+                }
             } catch (error) {
                 console.error(error);
                 alert('エラーが発生しました: ' + error.message);
@@ -66,20 +95,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (scoreForm) {
-        scoreForm.addEventListener('submit', async (e) => {
+    // --- 文字数カウンター ---
+    if (elements.answerArea) {
+        elements.answerArea.addEventListener('input', () => ui.updateCharacterCounter(elements.answerArea, elements.countBox));
+        ui.updateCharacterCounter(elements.answerArea, elements.countBox);
+    }
+
+    // --- 問題生成フォーム送信 ---
+    if (elements.generateForm) {
+        elements.generateForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            ui.startLoading('score');
-            await trivia.fetchTrivia(categorySelect.value);
+            ui.startLoading('generate');
+            await trivia.fetchTrivia(elements.categorySelect.value);
             trivia.start(APP_CONFIG.TRIVIA_INTERVAL);
 
             try {
-                const formData = new FormData(scoreForm);
+                const data = await api.post(elements.generateForm.action, new FormData(elements.generateForm));
+                renderer.renderExercise(data);
+                if (data.log_id) window.RissApp.currentLogId = data.log_id;
+            } catch (error) {
+                console.error(error);
+                alert('エラーが発生しました: ' + error.message);
+            } finally {
+                ui.stopLoading();
+                trivia.stop();
+            }
+        });
+    }
+
+    // --- 採点フォーム送信 ---
+    if (elements.scoreForm) {
+        elements.scoreForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (elements.answerArea.classList.contains('hidden')) {
+                elements.answerArea.value = renderer.getCombinedDynamicAnswers();
+            }
+
+            ui.startLoading('score');
+            const cat = elements.scoreForm.querySelector('[name="category"]').value;
+            await trivia.fetchTrivia(cat);
+            trivia.start(APP_CONFIG.TRIVIA_INTERVAL);
+
+            try {
+                const formData = new FormData(elements.scoreForm);
                 if (window.RissApp.currentLogId) {
                     formData.append('log_id', window.RissApp.currentLogId);
                 }
-                const data = await api.post(scoreForm.action, formData);
-                renderScoreResult(data);
+                const data = await api.post(elements.scoreForm.action, formData);
+                renderer.renderScore(data);
             } catch (error) {
                 console.error(error);
                 alert('エラーが発生しました: ' + error.message);
@@ -90,111 +154,48 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderExerciseResult(data) {
-        const contentDiv = document.getElementById('exercise-content');
-        if (contentDiv) {
-            contentDiv.innerHTML = parseMarkdown(data.exerciseText);
-            document.getElementById('exercise-card').classList.remove('hidden');
+    // --- 初期状態の復元 (URLパラメータ等) ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoPdfId = urlParams.get('pdf_id');
+
+    if (autoPdfId && pastPapers) {
+        const paper = pastPapers.find(p => p.id == autoPdfId);
+        if (paper) {
+            paperSelector.setValue(paper.year, paper.season, paper.id);
+            elements.btnLoadPaper.click();
         }
-
-        if (data.log_id) {
-            window.RissApp.currentLogId = data.log_id;
-        }
-
-        const form = document.getElementById('form-score');
-        if (form) {
-            form.querySelector('[name="category"]').value = data.category || '';
-            form.querySelector('[name="subcategory"]').value = data.subcategory || '';
-            form.querySelector('[name="exercise_text"]').value = data.exerciseText || '';
-            document.getElementById('answer-card').classList.remove('hidden');
-        }
-
-        const scoreResultCard = document.getElementById('score-result-card');
-        if (scoreResultCard) scoreResultCard.classList.add('hidden');
-
-        renderMermaid();
     }
 
-    function renderScoreResult(data) {
-        const scoreCard = document.getElementById('score-result-card');
-        const scoreContainer = document.getElementById('scoring-content');
+    // --- AI生成問題の再挑戦 (サーバー側で提供された情報を記録) ---
+    const retakeLogId = urlParams.get('retake_log_id');
+    if (retakeLogId && mode === 'ai_generated' && exerciseRaw) {
+        // すでに exerciseRaw で描画されているはずだが、
+        // この時点で「新しい解答セッション」としてログを先行記録する
+        const recordRetake = async () => {
+            const recordData = new FormData();
+            const token = document.querySelector('input[name="_token"]')?.value || '';
+            recordData.append('_token', token);
+            recordData.append('exercise_text', exerciseRaw);
+            recordData.append('category', window.RissApp.currentCategory || '');
+            recordData.append('subcategory', currentSubcategory || '');
 
-        if (!scoreCard || !scoreContainer) return;
-
-        const match = (data.scoringResult || '').match(/点数：(\d+)/);
-        const scoreValue = match ? parseInt(match[1]) : 0;
-
-        let scoreColor = APP_CONFIG.SCORING.COLORS.BRONZE;
-        if (scoreValue >= APP_CONFIG.SCORING.THRESHOLDS.GOLD) {
-            scoreColor = APP_CONFIG.SCORING.COLORS.GOLD;
-        } else if (scoreValue >= APP_CONFIG.SCORING.THRESHOLDS.SILVER) {
-            scoreColor = APP_CONFIG.SCORING.COLORS.SILVER;
-        }
-
-        scoreCard.classList.remove('hidden');
-
-        const badge = scoreCard.querySelector('.score-badge');
-        if (badge) {
-            badge.style.background = scoreColor;
-            badge.style.boxShadow = `0 10px 25px ${scoreColor}66`;
-            badge.textContent = scoreValue;
-        }
-
-        const label = scoreCard.querySelector('.score-label');
-        if (label) label.style.color = scoreColor;
-
-        scoreContainer.innerHTML = parseMarkdown(data.scoringResult);
-        scoreCard.scrollIntoView({ behavior: 'smooth' });
+            try {
+                const recordRes = await api.post('/exercise/record-generation', recordData);
+                if (recordRes.log_id) {
+                    window.RissApp.currentLogId = recordRes.log_id;
+                }
+            } catch (e) {
+                console.error('Error recording retake:', e);
+            }
+        };
+        recordRetake();
     }
 
     if (exerciseRaw) {
-        renderExerciseResult({ exerciseText: exerciseRaw, category: window.RissApp.currentCategory, subcategory: currentSubcategory });
-    } else {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get(APP_CONFIG.PARAMS.RETAKE) === '1') {
-            const retakeExercise = sessionStorage.getItem(APP_CONFIG.SESSION_KEYS.RETAKE_EXERCISE);
-            const retakeCategory = sessionStorage.getItem(APP_CONFIG.SESSION_KEYS.RETAKE_CATEGORY);
-            const retakeSubcategory = sessionStorage.getItem(APP_CONFIG.SESSION_KEYS.RETAKE_SUBCATEGORY);
-
-            if (retakeExercise) {
-                renderExerciseResult({
-                    exerciseText: retakeExercise,
-                    category: retakeCategory,
-                    subcategory: retakeSubcategory
-                });
-
-                (async () => {
-                    try {
-                        const formData = new FormData();
-                        const token = document.querySelector('input[name="_token"]')?.value || '';
-                        formData.append('_token', token);
-                        formData.append('category', retakeCategory || '');
-                        formData.append('subcategory', retakeSubcategory || '');
-                        formData.append('exercise_text', retakeExercise);
-
-                        const res = await api.post('/exercise/record-generation', formData);
-                        if (res.log_id) {
-                            window.RissApp.currentLogId = res.log_id;
-                        }
-                    } catch (e) {
-                        console.error('Failed to log retake attempt', e);
-                    }
-                })();
-
-                if (categorySelect && retakeCategory) {
-                    categorySelect.value = retakeCategory;
-                    ui.syncSubcategories(categorySelect, subcategorySelect, categories, { defaultLabel, noSelectionLabel });
-                    if (subcategorySelect && retakeSubcategory) {
-                        subcategorySelect.value = retakeSubcategory;
-                        subcategorySelect.disabled = false;
-                    }
-                }
-            }
-        }
+        renderer.renderExercise({ exerciseText: exerciseRaw, category: window.RissApp.currentCategory, subcategory: currentSubcategory });
     }
-
     if (scoringRaw) {
-        renderScoreResult({ scoringResult: scoringRaw });
+        renderer.renderScore({ scoringResult: scoringRaw });
     }
     renderMermaid();
 });

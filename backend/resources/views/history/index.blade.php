@@ -27,17 +27,25 @@
                             <tr>
                                 <td>{{ $log->created_at->format('Y/m/d H:i') }}</td>
                                 <td>
-                                    {{ $log->subcategory?->category?->name ?? '不明' }} /
-                                    <span class="text-muted">{{ $log->subcategory?->name ?? '全般' }}</span>
+                                    @if($log->exercise_type === 'past_paper')
+                                        <span class="counter-tag"
+                                            style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">過去問演習</span>
+                                        {{ $log->pdfFile ? $log->pdfFile->display_name : '過去問演習' }}
+                                    @else
+                                        <span class="counter-tag"
+                                            style="background: #f0fdf4; color: #166534; border-color: #bbf7d0;">AI演習</span>
+                                        {{ $log->subcategory?->category?->name ?? 'ランダム' }} /
+                                        <span class="text-muted">{{ $log->subcategory?->name ?? '全般' }}</span>
+                                    @endif
                                 </td>
-                                <td>
+                                <td style="white-space: nowrap;">
                                     @if($log->score !== null)
                                         <span class="blank-marker">{{ $log->score }}点</span>
                                     @else
                                         <span style="color: #f59e0b; font-weight: 600;">採点待ち</span>
                                     @endif
                                 </td>
-                                <td>
+                                <td style="white-space: nowrap;">
                                     <a href="{{ route('history.show', $log) }}" class="nav-brand"
                                         style="font-size: 14px;">詳細・再挑戦</a>
                                 </td>

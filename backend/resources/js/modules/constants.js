@@ -18,19 +18,19 @@ export const APP_CONFIG = {
     PROGRESS_STAGES: {
         SEARCH: {
             max: 20, speed: 4.0,
-            text: { generate: "過去問ナレッジベースを検索中...", score: "提出された解答を構文解析中..." }
+            text: { generate: "過去問ナレッジベースを検索中...", score: "提出された解答を構文解析中...", paper: "過去問データベースを照合中..." }
         },
         ANALYZE: {
             max: 50, speed: 3.5,
-            text: { generate: "試験シラバスに基づき問題構成を分析中...", score: "採点基準との適合性を照合中..." }
+            text: { generate: "試験シラバスに基づき問題構成を分析中...", score: "採点基準との適合性を照合中...", paper: "試験問題の構成を確認中..." }
         },
         DRAFT: {
             max: 80, speed: 2.0,
-            text: { generate: "AIによる推論および演習シナリオの構築中...", score: "専門的知見に基づく講評を策定中..." }
+            text: { generate: "AIによる推論および演習シナリオの構築中...", score: "専門的知見に基づく講評を策定中...", paper: "解答フォームを構築中..." }
         },
         FINALIZE: {
             max: 99, speed: 0.8,
-            text: { generate: "出力形式の最終調整および生成中...", score: "フィードバック結果を整理中..." }
+            text: { generate: "出力形式の最終調整および生成中...", score: "フィードバック結果を整理中...", paper: "表示の最終調整中..." }
         }
     },
 

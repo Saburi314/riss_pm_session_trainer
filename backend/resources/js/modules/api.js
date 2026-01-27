@@ -7,7 +7,28 @@ export async function post(url, formData) {
         },
         body: formData
     });
-    if (!response.ok) throw new Error('Network response was not ok');
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.message || 'Network response was not ok');
+        error.status = response.status;
+        throw error;
+    }
     return await response.json();
 }
 
+export async function get(url) {
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        },
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.message || 'Network response was not ok');
+        error.status = response.status;
+        throw error;
+    }
+    return await response.json();
+}

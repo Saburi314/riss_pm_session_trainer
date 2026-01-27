@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\PdfFile;
+use App\Models\Category;
+use App\Models\Subcategory;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -21,11 +22,22 @@ class ExerciseService
     }
 
     /**
+     * カテゴリとサブカテゴリのモデルをコードから解決する
+     */
+    public function resolveCategoryModels(?string $catCode, ?string $subCode): array
+    {
+        $catModel = $catCode ? Category::where('code', $catCode)->first() : null;
+        $subModel = $subCode ? Subcategory::where('code', $subCode)->first() : null;
+
+        return [$catModel, $subModel];
+    }
+
+    /**
      * 問題を生成する
      */
     public function generateExercise(string $prompt): string
     {
-        return $this->callResponses($prompt, 7500, 'low');
+        return $this->callResponses($prompt, 7500, 'medium');
     }
 
     /**
@@ -126,5 +138,16 @@ class ExerciseService
         }
 
         return $outputText;
+    }
+
+    /**
+     * AIの回答テキストからスコアを抽出する
+     */
+    public function extractScore(string $text): ?int
+    {
+        if (preg_match('/(?:Score|点数|スコア)[:：]\s*(\d+)/u', $text, $matches)) {
+            return (int) $matches[1];
+        }
+        return null;
     }
 }

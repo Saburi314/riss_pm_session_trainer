@@ -71,8 +71,8 @@ class PdfFileResource extends Resource
                             ->label('試験区分')
                             ->options([
                                 'am2' => '午前II',
-                                'pm1' => '午後I',
-                                'pm2' => '午後II',
+                                'pm1' => '午後　午後１',
+                                'pm2' => '午後　午後２',
                                 'pm' => '午後',
                             ])
                             ->required(),
@@ -145,8 +145,8 @@ class PdfFileResource extends Resource
                     ->label('試験区分')
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'am2' => '午前II',
-                        'pm1' => '午後I',
-                        'pm2' => '午後II',
+                        'pm1' => '午後　午後１',
+                        'pm2' => '午後　午後２',
                         'pm' => '午後',
                         default => $state,
                     }),

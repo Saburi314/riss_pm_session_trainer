@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@yield('title', '情報処理安全確保支援士　午後問対策サイト')</title>
+    <title>@yield('title', config('app.name'))</title>
     {{-- 描画ライブラリ --}}
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
@@ -15,12 +15,12 @@
 <body>
     <nav class="navbar">
         <div class="container nav-content">
-            <a href="{{ route('exercise.index') }}" class="nav-brand">情報処理安全確保支援士　午後問対策サイト</a>
+            <a href="{{ route('exercise.index') }}" class="nav-brand">{{ config('app.name') }}</a>
             <div class="nav-links">
                 @auth
-                    <a href="{{ route('exercise.index') }}">問題演習</a>
+                    <a href="{{ route('exercise.index') }}?mode=past_paper">過去問演習</a>
+                    <a href="{{ route('exercise.index') }}?mode=ai_generated">AI演習</a>
                     <a href="{{ route('history.index') }}">学習履歴</a>
-                    <a href="{{ route('analysis') }}">傾向分析</a>
                     <a href="{{ route('profile.show') }}">プロフィール</a>
                     <form action="{{ route('logout') }}" method="POST" class="inline">
                         @csrf

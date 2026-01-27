@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-  <h1>情報処理安全確保支援士　午後問対策サイト</h1>
+  <h1>{{ config('app.name') }}</h1>
 
   @if ($errors->any())
     <div class="card error-card">
@@ -42,30 +42,63 @@
   </div>
 
   <section class="card">
-    <form id="form-generate" method="post" action="{{ route('exercise.generate') }}">
-      @csrf
+    @if($mode === 'past_paper')
+      <h2 class="section-header mb-16">過去問を選択</h2>
       <div class="row">
-        <div class="flex-2 min-w-200">
-          <label class="score-label">Category</label>
-          <select name="category" id="category" class="full-width mt-8">
-            <option value="">{{ \App\Models\Category::DEFAULT_NAME }}</option>
-            @foreach($categories as $code => $cat)
-              <option value="{{ $code }}" @selected(($category ?? '') === $code)>{{ $cat['category'] }}</option>
-            @endforeach
-          </select>
-        </div>
-        <div class="flex-2 min-w-200">
-          <label class="score-label">Subcategory</label>
-          <select name="subcategory" id="subcategory" class="full-width mt-8" disabled>
-            <option value="" selected disabled>{{ \App\Models\Category::NO_SELECTION_REQUIRED_NAME }}</option>
+        <div class="flex-1 min-w-150">
+          <label class="text-sm font-bold">年度</label>
+          <select id="select-year" class="full-width mt-4">
+            <option value="" selected disabled>年度を選択</option>
           </select>
         </div>
         <div class="flex-1 min-w-150">
-          <button type="submit" class="full-width">問題を生成</button>
+          <label class="text-sm font-bold">時期</label>
+          <select id="select-season" class="full-width mt-4" disabled>
+            <option value="" selected disabled>時期を選択</option>
+          </select>
+        </div>
+        <div class="flex-1 min-w-150">
+          <label class="text-sm font-bold">区分</label>
+          <select id="select-period" class="full-width mt-4" disabled>
+            <option value="" selected disabled>試験区分を選択</option>
+          </select>
+        </div>
+        <div class="flex-2 min-w-200">
+          <label class="text-sm font-bold">&nbsp;</label>
+          <button id="btn-load-paper" class="full-width" style="white-space: nowrap;">選択した問題を読み込む</button>
         </div>
       </div>
-    </form>
+    @else
+      <form id="form-generate" method="post" action="{{ route('exercise.generate') }}">
+        @csrf
+        <div class="row">
+          <div class="flex-2 min-w-200">
+            <label class="score-label">Category</label>
+            <select name="category" id="category" class="full-width mt-8">
+              <option value="">{{ \App\Models\Category::DEFAULT_NAME }}</option>
+              @foreach($categories as $code => $cat)
+                <option value="{{ $code }}" @selected(($category ?? '') === $code)>{{ $cat['category'] }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="flex-2 min-w-200">
+            <label class="score-label">Subcategory</label>
+            <select name="subcategory" id="subcategory" class="full-width mt-8" disabled>
+              <option value="" selected disabled>{{ \App\Models\Category::NO_SELECTION_REQUIRED_NAME }}</option>
+            </select>
+          </div>
+          <div class="flex-1 min-w-150">
+            <button type="submit" class="full-width">問題を生成</button>
+          </div>
+        </div>
+      </form>
+    @endif
   </section>
+
+  {{-- PDF表示カード --}}
+  <article id="pdf-card" class="card hidden no-padding" style="height: 800px;">
+    <iframe id="pdf-viewer" src="" width="100%" height="100%" frameborder="0"></iframe>
+  </article>
 
   {{-- 演習問題カード --}}
   <article id="exercise-card" class="card hidden">
@@ -93,6 +126,9 @@
       <input type="hidden" name="category" value="{{ $category ?? '' }}">
       <input type="hidden" name="subcategory" value="{{ $subcategory ?? '' }}">
       <input type="hidden" name="exercise_text" value="{{ $exerciseText ?? '' }}">
+      <input type="hidden" name="pdf_file_id" id="pdf_file_id_hidden">
+
+      <div id="dynamic-form-container" class="mb-24"></div>
 
       <textarea name="user_answer" id="user_answer"
         placeholder="(1) 解答を入力してください...">{{ $userAnswer ?? "(1)\n(2)\n(3)\n(4)\n(5)" }}</textarea>
@@ -116,13 +152,17 @@
 
   <script>
     window.RissApp = {
+      mode: "{{ $mode }}",
       categories: @json($categories),
-      currentCategory: "{{ $category ?? '' }}",
+      @if($mode === 'past_paper' && $pastPapers)
+        pastPapers: @json($pastPapers),
+      @endif
+    currentCategory: "{{ $category ?? '' }}",
       currentSubcategory: "{{ $subcategory ?? '' }}",
-      exerciseRaw: @json($exerciseText ?? ''),
-      scoringRaw: @json($scoringResult ?? ''),
-      defaultLabel: "{{ \App\Models\Category::DEFAULT_NAME }}",
-      noSelectionLabel: "{{ \App\Models\Category::NO_SELECTION_REQUIRED_NAME }}"
-    };
+        exerciseRaw: @json($exerciseText ?? ''),
+          scoringRaw: @json($scoringResult ?? ''),
+            defaultLabel: "{{ \App\Models\Category::DEFAULT_NAME }}",
+              noSelectionLabel: "{{ \App\Models\Category::NO_SELECTION_REQUIRED_NAME }}"
+                      };
   </script>
 @endsection

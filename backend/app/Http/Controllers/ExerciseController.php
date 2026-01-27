@@ -15,14 +15,86 @@ use Illuminate\Support\Facades\Auth;
 
 class ExerciseController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $mode = $request->query('mode', 'past_paper');
         $categories = Category::getDisplayData();
-        return view('exercise.index', compact('categories'));
+
+        $exerciseText = null;
+        $category = null;
+        $subcategory = null;
+
+        // 再挑戦用: DBから取得
+        $retakeLogId = $request->query('retake_log_id');
+        if ($retakeLogId) {
+            $log = StudyLog::find($retakeLogId);
+            if ($log && $log->user_id === Auth::id()) {
+                $exerciseText = $log->exercise_text;
+                $category = $log->subcategory?->category?->code;
+                $subcategory = $log->subcategory?->code;
+            }
+        }
+
+        $pastPapers = null;
+        if ($mode === 'past_paper') {
+            $pastPapers = \App\Models\PdfFile::where('doc_type', 'question') // 重複排除のため問題ファイルのみ取得
+                ->whereIn('exam_period', ['pm', 'pm1', 'pm2'])
+                ->orderBy('year', 'desc')
+                ->orderBy('season', 'desc')
+                ->get()
+                ->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'year' => $p->year,
+                        'gengo' => $p->getYearGengo(),
+                        'season' => $p->season,
+                        'season_name' => $p->getSeasonName(),
+                        'period' => $p->exam_period,
+                        'period_name' => $p->getPeriodName(),
+                    ];
+                });
+        }
+
+        return view('exercise.index', compact('categories', 'mode', 'pastPapers', 'exerciseText', 'category', 'subcategory'));
+    }
+
+    public function viewPdf(\App\Models\PdfFile $pdf)
+    {
+        $path = $pdf->getFullStoragePath();
+        if (!file_exists($path)) {
+            abort(404);
+        }
+
+        return response()->file($path, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $pdf->filename . '"'
+        ]);
+    }
+
+    public function getForm(\App\Models\PdfFile $pdf)
+    {
+        return response()->json([
+            'status' => 'success',
+            'form' => $pdf->answer_form_json
+        ]);
     }
 
     public function generate(GenerateExerciseRequest $request, ExerciseService $exerciseService, PromptService $promptService)
     {
+        if (Auth::check()) {
+            $todayCount = StudyLog::where('user_id', Auth::id())
+                ->whereDate('created_at', now()->toDateString())
+                ->whereIn('exercise_type', ['ai_generated', 'past_paper']) // 採点や生成の合計
+                ->count();
+
+            if (!Auth::user()->isAdmin() && $todayCount >= 20) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => '本日の利用上限に達しました。明日またお試しください。'
+                ], 403);
+            }
+        }
+
         $category = $request->input('category');
         $subcategory = $request->input('subcategory');
 
@@ -33,13 +105,14 @@ class ExerciseController extends Controller
         // 学習履歴の初期保存
         $logId = null;
         if (Auth::check()) {
-            [$catModel, $subModel] = $this->findCategoryAndSubcategory($category, $subcategory);
+            [$catModel, $subModel] = $exerciseService->resolveCategoryModels($category, $subcategory);
 
             $log = StudyLog::create([
                 'user_id' => Auth::id(),
                 'category_id' => $catModel?->id,
                 'subcategory_id' => $subModel?->id,
                 'exercise_text' => $exerciseText,
+                'exercise_type' => 'ai_generated',
             ]);
             $logId = $log->id;
         }
@@ -53,12 +126,13 @@ class ExerciseController extends Controller
         ]);
     }
 
-    public function recordGeneration(Request $request)
+    public function recordGeneration(Request $request, ExerciseService $exerciseService)
     {
         $request->validate([
             'category' => 'nullable|string',
             'subcategory' => 'nullable|string',
             'exercise_text' => 'required|string',
+            'pdf_file_id' => 'nullable|integer',
         ]);
 
         if (!Auth::check()) {
@@ -67,13 +141,18 @@ class ExerciseController extends Controller
 
         $category = $request->input('category');
         $subcategory = $request->input('subcategory');
-        [$catModel, $subModel] = $this->findCategoryAndSubcategory($category, $subcategory);
+        $pdfFileId = $request->input('pdf_file_id');
+        $exerciseType = $pdfFileId ? 'past_paper' : 'ai_generated';
+
+        [$catModel, $subModel] = $exerciseService->resolveCategoryModels($category, $subcategory);
 
         $log = StudyLog::create([
             'user_id' => Auth::id(),
             'category_id' => $catModel?->id,
             'subcategory_id' => $subModel?->id,
             'exercise_text' => $request->input('exercise_text'),
+            'pdf_file_id' => $pdfFileId,
+            'exercise_type' => $exerciseType,
         ]);
 
         return response()->json([
@@ -96,11 +175,7 @@ class ExerciseController extends Controller
         // 学習履歴の更新
         $logId = $request->input('log_id');
         if (Auth::check()) {
-            // スコアの抽出 (Score: XX または 点数：XX または スコア：XX)
-            $score = null;
-            if (preg_match('/(?:Score|点数|スコア)[:：]\s*(\d+)/u', $scoringResult, $matches)) {
-                $score = (int) $matches[1];
-            }
+            $score = $exerciseService->extractScore($scoringResult);
 
             if ($logId) {
                 $log = StudyLog::find($logId);
@@ -112,8 +187,11 @@ class ExerciseController extends Controller
                     ]);
                 }
             } else {
-                // 万が一ログがない場合は新規作成
-                [$catModel, $subModel] = $this->findCategoryAndSubcategory($category, $subcategory);
+                // 過去問演習などの場合、ここで新規作成されることがある
+                $pdfFileId = $request->input('pdf_file_id');
+                $exerciseType = $pdfFileId ? 'past_paper' : 'ai_generated';
+
+                [$catModel, $subModel] = $exerciseService->resolveCategoryModels($category, $subcategory);
 
                 StudyLog::create([
                     'user_id' => Auth::id(),
@@ -123,6 +201,8 @@ class ExerciseController extends Controller
                     'user_answer' => $userAnswer,
                     'score' => $score,
                     'feedback' => $scoringResult,
+                    'pdf_file_id' => $pdfFileId,
+                    'exercise_type' => $exerciseType,
                 ]);
             }
         }
@@ -137,11 +217,4 @@ class ExerciseController extends Controller
         ]);
     }
 
-    private function findCategoryAndSubcategory(?string $catCode, ?string $subCode): array
-    {
-        $catModel = $catCode ? Category::where('code', $catCode)->first() : null;
-        $subModel = $subCode ? Subcategory::where('code', $subCode)->first() : null;
-
-        return [$catModel, $subModel];
-    }
 }

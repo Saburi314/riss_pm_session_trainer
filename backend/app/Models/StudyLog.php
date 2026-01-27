@@ -17,7 +17,14 @@ class StudyLog extends Model
         'user_answer',
         'score',
         'feedback',
+        'pdf_file_id',
+        'exercise_type',
     ];
+
+    public function pdfFile()
+    {
+        return $this->belongsTo(PdfFile::class);
+    }
 
     public function user()
     {

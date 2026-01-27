@@ -14,7 +14,7 @@ export class UIManager {
         this.progress = 0;
     }
 
-    startLoading(mode) {
+    startLoading(label) {
         if (!this.loadingOverlay) return;
 
         this.progressBar = this.progressBar || document.getElementById('loading-progress-bar');
@@ -23,7 +23,10 @@ export class UIManager {
         this.loadingOverlay.classList.add('active');
         this.seconds = 0;
         this.progress = 0;
-        this.mode = mode; // 保持
+
+        // modeを判定 (simulateProgressでのテキスト切り替え用)
+        this.mode = (label === 'generate' || label === 'score' || label === 'paper') ? label : 'generate';
+
         if (this.timerCount) this.timerCount.textContent = '0';
         this.updateProgress(0);
 
@@ -38,15 +41,19 @@ export class UIManager {
             this.simulateProgress();
         }, APP_CONFIG.PROGRESS_UPDATE_INTERVAL);
 
-        this.updateLoadingTitle(mode);
+        this.updateLoadingTitle(label);
     }
 
-    updateLoadingTitle(mode) {
+    updateLoadingTitle(label) {
         if (!this.loadingTitle) return;
-        if (mode === 'generate') {
+        if (label === 'generate') {
             this.loadingTitle.textContent = "問題を生成しています...";
-        } else if (mode === 'score') {
-            this.loadingTitle.textContent = "採点しています...";
+        } else if (label === 'score') {
+            this.loadingTitle.textContent = "採点を行っています...";
+        } else if (label === 'paper') {
+            this.loadingTitle.textContent = "過去問を読み込んでいます...";
+        } else {
+            this.loadingTitle.textContent = label;
         }
     }
 
@@ -55,7 +62,7 @@ export class UIManager {
 
         // 100%まで滑らかに飛ばす
         clearInterval(this.progressInterval);
-        const finishStep = (100 - this.progress) / 10;
+        const finishStep = (100 - this.progress) / 5;
         let count = 0;
 
         const finishInterval = setInterval(() => {
@@ -63,14 +70,14 @@ export class UIManager {
             this.updateProgress(Math.min(this.progress, 100));
             count++;
 
-            if (count >= 10 || this.progress >= 100) {
+            if (count >= 5 || this.progress >= 100) {
                 clearInterval(finishInterval);
                 setTimeout(() => {
                     this.loadingOverlay.classList.remove('active');
                     clearInterval(this.timerInterval);
-                }, 400);
+                }, 200);
             }
-        }, 50);
+        }, 30);
     }
 
     simulateProgress() {

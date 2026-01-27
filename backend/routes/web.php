@@ -33,13 +33,15 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('verified')->group(function () {
         Route::get('/exercise', [ExerciseController::class, 'index'])->name('exercise.index');
-        Route::post('/exercise/generate', [ExerciseController::class, 'generate'])->name('exercise.generate');
+        Route::post('/exercise/generate', [ExerciseController::class, 'generate'])->middleware('throttle:ai-generate')->name('exercise.generate');
         Route::post('/exercise/record-generation', [ExerciseController::class, 'recordGeneration'])->name('exercise.record-generation');
-        Route::post('/exercise/score', [ExerciseController::class, 'score'])->name('exercise.score');
+        Route::post('/exercise/score', [ExerciseController::class, 'score'])->middleware('throttle:ai-score')->name('exercise.score');
+
+        Route::get('/exercise/pdf/{pdf}', [ExerciseController::class, 'viewPdf'])->name('exercise.pdf');
+        Route::get('/exercise/form/{pdf}', [ExerciseController::class, 'getForm'])->name('exercise.form');
 
         Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
         Route::get('/history/{history}', [HistoryController::class, 'show'])->name('history.show');
-        Route::get('/analysis', [HistoryController::class, 'analysis'])->name('analysis');
     });
 });
 

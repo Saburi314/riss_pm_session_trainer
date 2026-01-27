@@ -19,11 +19,11 @@ class CustomVerifyEmail extends VerifyEmail
         $verificationUrl = $this->verificationUrl($notifiable);
 
         return (new MailMessage)
-            ->subject('【情報処理安全確保支援士　午後問対策サイト】メールアドレスの確認')
+            ->subject('【' . config('app.name') . '】メールアドレスの確認')
             ->greeting('こんにちは！')
-            ->line('情報処理安全確保支援士　午後問対策サイトにご登録いただき、ありがとうございます。')
+            ->line(config('app.name') . 'にご登録いただき、ありがとうございます。')
             ->line('以下のボタンをクリックして、メールアドレスの確認を完了してください。')
             ->action('メールアドレスを確認する', $verificationUrl)
-            ->salutation('情報処理安全確保支援士　午後問対策サイト');
+            ->salutation(config('app.name'));
     }
 }
