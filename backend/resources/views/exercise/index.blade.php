@@ -116,7 +116,7 @@
       解答入力
     </h2>
     <p class="answer-meta mb-24">
-      設問番号 (1)〜(5) の形式で解答を記入してください。
+      設問番号に対応した形式で解答を記入してください。
     </p>
 
     <div id="segment-counters" class="mb-16 display-flex-wrap-gap-8"></div>
@@ -131,7 +131,7 @@
       <div id="dynamic-form-container" class="mb-24"></div>
 
       <textarea name="user_answer" id="user_answer"
-        placeholder="(1) 解答を入力してください...">{{ $userAnswer ?? "(1)\n(2)\n(3)\n(4)\n(5)" }}</textarea>
+        placeholder="(1) 解答を入力してください...">{{ $userAnswer ?? "(1)\n(2)\n(3)" }}</textarea>
 
       <div class="mt-32 text-center">
         <button type="submit" class="secondary btn-large">
@@ -163,6 +163,6 @@
           scoringRaw: @json($scoringResult ?? ''),
             defaultLabel: "{{ \App\Models\Category::DEFAULT_NAME }}",
               noSelectionLabel: "{{ \App\Models\Category::NO_SELECTION_REQUIRED_NAME }}"
-                      };
+                              };
   </script>
 @endsection

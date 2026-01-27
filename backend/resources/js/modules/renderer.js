@@ -40,7 +40,7 @@ export function parseMarkdown(text) {
     };
 
     const robustText = robustPreprocess(text);
-    const highlighted = robustText.replace(/(\*\*)?［\s*([a-z])\s*］(\*\*)?/g, '<span class="blank-marker">［ $2 ］</span>');
+    const highlighted = robustText.replace(/(\*\*)?[［\[]\s*([a-z])\s*[］\]](\*\*)?/g, '<span class="blank-marker">［ $2 ］</span>');
 
     return marked.parse(highlighted, { renderer: renderer, breaks: true });
 }

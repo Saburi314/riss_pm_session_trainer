@@ -29,7 +29,13 @@ export class ExerciseRenderer {
             if (this.pdfFileIdHidden) this.pdfFileIdHidden.value = '';
 
             if (this.dynamicFormContainer) this.dynamicFormContainer.innerHTML = '';
-            if (this.answerArea) this.answerArea.classList.remove('hidden');
+            if (this.answerArea) {
+                this.answerArea.classList.remove('hidden');
+                // AI演習は3問固定とする
+                if (!data.pdf_file_id) {
+                    this.answerArea.value = "(1)\n(2)\n(3)";
+                }
+            }
             if (this.answerCard) this.answerCard.classList.remove('hidden');
         }
 
