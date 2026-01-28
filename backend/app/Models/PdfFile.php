@@ -84,8 +84,8 @@ class PdfFile extends Model
     {
         return match (strtolower($this->exam_period)) {
             'pm' => '午後',
-            'pm1' => '午後　午後１',
-            'pm2' => '午後　午後２',
+            'pm1' => '午後Ⅰ',
+            'pm2' => '午後Ⅱ',
             default => strtoupper($this->exam_period),
         };
     }

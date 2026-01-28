@@ -144,9 +144,9 @@ class PdfFileResource extends Resource
                 Tables\Columns\TextColumn::make('exam_period')
                     ->label('試験区分')
                     ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'am2' => '午前II',
-                        'pm1' => '午後　午後１',
-                        'pm2' => '午後　午後２',
+                        'am2' => '午前Ⅱ',
+                        'pm1' => '午後Ⅰ',
+                        'pm2' => '午後Ⅱ',
                         'pm' => '午後',
                         default => $state,
                     }),
