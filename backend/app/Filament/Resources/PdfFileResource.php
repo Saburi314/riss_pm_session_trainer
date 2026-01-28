@@ -70,9 +70,9 @@ class PdfFileResource extends Resource
                         Forms\Components\Select::make('exam_period')
                             ->label('試験区分')
                             ->options([
-                                'am2' => '午前II',
-                                'pm1' => '午後　午後１',
-                                'pm2' => '午後　午後２',
+                                'am2' => '午前Ⅱ',
+                                'pm1' => '午後Ⅰ',
+                                'pm2' => '午後Ⅱ',
                                 'pm' => '午後',
                             ])
                             ->required(),
