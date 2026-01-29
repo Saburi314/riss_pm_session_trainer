@@ -10,7 +10,7 @@
 <x-filament-widgets::widget>
     <x-filament::section>
         <x-slot name="heading">
-            PDF登録状況マトリックス
+            各PDFファイルのDB登録状況
         </x-slot>
 
         <div class="overflow-x-auto">

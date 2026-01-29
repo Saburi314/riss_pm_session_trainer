@@ -81,7 +81,7 @@ class PdfFileResource extends Resource
                             ->options([
                                 'question' => '問題',
                                 'answer' => '解答',
-                                'commentary' => '解説',
+                                'commentary' => '講評',
                             ])
                             ->required(),
                     ])->columns(2),
@@ -155,7 +155,7 @@ class PdfFileResource extends Resource
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'question' => '問題',
                         'answer' => '解答',
-                        'commentary' => '解説',
+                        'commentary' => '講評',
                         default => $state,
                     }),
                 Tables\Columns\TextColumn::make('index_status')
