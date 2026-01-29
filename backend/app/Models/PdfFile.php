@@ -124,4 +124,13 @@ class PdfFile extends Model
     {
         return storage_path('app/' . $this->storage_path);
     }
+
+    /**
+     * OCR済みファイル（AIが検索可能な形式に変換済みのファイル）のフルパスを取得
+     */
+    public function getSearchableTextPath(): ?string
+    {
+        $path = storage_path('app/searchable_texts/' . $this->filename . '.txt');
+        return file_exists($path) ? $path : null;
+    }
 }

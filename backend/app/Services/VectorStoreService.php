@@ -10,11 +10,13 @@ class VectorStoreService
 {
     private string $apiKey;
     private string $vectorStoreId;
+    private PdfAnalysisService $analysisService;
 
-    public function __construct()
+    public function __construct(PdfAnalysisService $analysisService)
     {
         $this->apiKey = (string) config('services.openai.api_key');
         $this->vectorStoreId = (string) config('services.openai.vector_store_id');
+        $this->analysisService = $analysisService;
     }
 
     private function getHeaders(): array
@@ -29,21 +31,36 @@ class VectorStoreService
      * PDFファイルをOpenAIと同期します。
      * 各ステップごとにDBを更新し、中断しても続きから再開できるようにします。
      */
-    public function syncFile(PdfFile $pdfFile): array
+    public function syncFile(PdfFile $pdfFile, bool $forceOcr = false): array
     {
         if (!$this->apiKey || !$this->vectorStoreId) {
             throw new \RuntimeException('OpenAI API key or Vector Store ID is not configured.');
         }
 
         try {
-            // ステップ 1: OpenAI Files API へのアップロード (IDがなければ実行)
-            if (!$pdfFile->openai_file_id) {
-                Log::info("Step 1/3: Uploading to OpenAI Files API: {$pdfFile->filename}");
-                $openaiFileId = $this->uploadToFilesApi($pdfFile);
-                $pdfFile->update(['openai_file_id' => $openaiFileId]);
+            // ステップ 0: 解析 (OCR/Text 抽出) の実行
+            // 既に解析済み & .txt ファイルが存在する場合はスキップ（force-ocr 時を除く）
+            $searchableTextPath = $pdfFile->getSearchableTextPath();
+
+            if ($searchableTextPath && !$forceOcr) {
+                Log::info("Step 0/3: Searchable text already exists, skipping analysis for {$pdfFile->filename}");
             } else {
-                Log::info("Step 1/3: Using existing OpenAI File ID: {$pdfFile->openai_file_id}");
+                Log::info("Step 0/3: Analyzing PDF for {$pdfFile->filename}");
+                $this->analysisService->analyze($pdfFile);
             }
+
+            // ステップ 1: OpenAI Files API へのアップロード
+            // ファイルが更新されている可能性(force-ocr等)があるため、
+            // 既存のファイルがあれば削除してから再アップロードする
+            if ($pdfFile->openai_file_id) {
+                Log::info("Step 1/3: Removing old file from OpenAI: {$pdfFile->openai_file_id}");
+                $this->deleteFileFromOpenAI($pdfFile->openai_file_id);
+                $pdfFile->update(['openai_file_id' => null, 'vector_store_file_id' => null]);
+            }
+
+            Log::info("Step 1/3: Uploading new searchable file to OpenAI: {$pdfFile->filename}");
+            $openaiFileId = $this->uploadToFilesApi($pdfFile);
+            $pdfFile->update(['openai_file_id' => $openaiFileId]);
 
             // ステップ 2: ベクトルストアへの追加 (IDがない、または前回失敗/キャンセルの場合に実行)
             $unstableStatuses = ['failed', 'cancelled', 'pending', null];
@@ -96,15 +113,20 @@ class VectorStoreService
 
     private function uploadToFilesApi(PdfFile $pdfFile): string
     {
-        $filePath = $pdfFile->getFullStoragePath();
+        $searchablePath = $pdfFile->getSearchableTextPath();
+        $filePath = $searchablePath ?: $pdfFile->getFullStoragePath();
+        $displayFilename = $searchablePath ? $pdfFile->filename . '.txt' : $pdfFile->filename;
+
         if (!file_exists($filePath)) {
             throw new \RuntimeException("File not found on disk: {$filePath}");
         }
 
+        Log::info("Uploading file to OpenAI: {$displayFilename}");
+
         $response = Http::timeout(120)
             ->retry(3, 2000)
             ->withHeaders($this->getHeaders())
-            ->attach('file', file_get_contents($filePath), $pdfFile->filename)
+            ->attach('file', file_get_contents($filePath), $displayFilename)
             ->post('https://api.openai.com/v1/files', [
                 'purpose' => 'assistants',
             ]);
@@ -115,6 +137,20 @@ class VectorStoreService
         }
 
         return $response->json('id');
+    }
+
+    /**
+     * OpenAI の Files API からファイルを物理削除
+     */
+    private function deleteFileFromOpenAI(string $fileId): bool
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())->delete("https://api.openai.com/v1/files/{$fileId}");
+            return $response->ok();
+        } catch (\Exception $e) {
+            Log::warning("Failed to delete file from OpenAI: {$fileId}. " . $e->getMessage());
+            return false;
+        }
     }
 
     private function addToVectorStore(string $openaiFileId, PdfFile $pdfFile): array

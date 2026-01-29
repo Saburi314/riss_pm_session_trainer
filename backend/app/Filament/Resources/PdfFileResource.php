@@ -202,7 +202,7 @@ class PdfFileResource extends Resource
                     ->action(function (\App\Models\PdfFile $record, \App\Services\VectorStoreService $service): void {
                         try {
                             set_time_limit(600); // 10分まで実行を許可
-                            $service->syncFile($record);
+                            $service->syncFile($record, false); // 既存のテキストがあればスキップ
                             \Filament\Notifications\Notification::make()
                                 ->title('同期成功')
                                 ->success()
@@ -228,7 +228,7 @@ class PdfFileResource extends Resource
                             set_time_limit(0); // 無制限
                             $records->each(function ($record) use ($service) {
                                 if ($record->index_status !== 'completed') {
-                                    $service->syncFile($record);
+                                    $service->syncFile($record, false); // 既存のテキストがあればスキップ
                                 }
                             });
                             \Filament\Notifications\Notification::make()

@@ -37,7 +37,7 @@ return [
 
     'openai' => [
         'api_key' => env('OPENAI_API_KEY'),
-        'model' => env('OPENAI_MODEL', 'gpt-4o'),
+        'model' => env('OPENAI_MODEL', 'gpt-5.2-2025-12-11'),
         'vector_store_id' => env('OPENAI_VECTOR_STORE_ID'),
     ],
 
