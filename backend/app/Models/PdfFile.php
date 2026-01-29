@@ -25,7 +25,6 @@ class PdfFile extends Model
         'index_status',
         'indexed_at',
         'error_message',
-        'answer_form_json',
     ];
 
     protected function casts(): array
@@ -34,7 +33,6 @@ class PdfFile extends Model
             'year' => 'integer',
             'size' => 'integer',
             'indexed_at' => 'datetime',
-            'answer_form_json' => 'array',
         ];
     }
 
@@ -93,6 +91,14 @@ class PdfFile extends Model
     public function getFullDisplayName(): string
     {
         return "{$this->year}年 ({$this->getYearGengo()}) {$this->getSeasonName()} {$this->getPeriodName()}";
+    }
+
+    /**
+     * 設問データとのリレーション (filenameベース)
+     */
+    public function question(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Question::class, 'filename', 'filename');
     }
 
     /**
