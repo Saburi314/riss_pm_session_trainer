@@ -45,7 +45,7 @@ class VectorStoreService
                 Log::info("Step 1/3: Using existing OpenAI File ID: {$pdfFile->openai_file_id}");
             }
 
-            // ステップ 2: ベクターストアへの追加 (IDがない、または前回失敗/キャンセルの場合に実行)
+            // ステップ 2: ベクトルストアへの追加 (IDがない、または前回失敗/キャンセルの場合に実行)
             $unstableStatuses = ['failed', 'cancelled', 'pending', null];
             if (!$pdfFile->vector_store_file_id || in_array($pdfFile->index_status, $unstableStatuses)) {
                 Log::info("Step 2/3: Adding to Vector Store: {$pdfFile->openai_file_id}");
@@ -171,13 +171,13 @@ class VectorStoreService
     }
 
     /**
-     * ベクターストアの全アタッチメントと、OpenAI上の全ファイルをクリーンアップします。
+     * ベクトルストアの全アタッチメントと、OpenAI上の全ファイルをクリーンアップします。
      */
     public function clearAllOpenAIFiles(): array
     {
         $stats = ['vector_store' => 0, 'storage' => 0];
 
-        // 1. ベクターストアからの解除
+        // 1. ベクトルストアからの解除
         $after = null;
         do {
             $url = "https://api.openai.com/v1/vector_stores/{$this->vectorStoreId}/files?limit=100";

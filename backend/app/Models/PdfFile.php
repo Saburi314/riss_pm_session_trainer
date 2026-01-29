@@ -4,6 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * App\Models\PdfFile
+ *
+ * @property int $id
+ * @property string $filename
+ * @property string $storage_disk
+ * @property string $storage_path
+ * @property int $size
+ * @property int $year
+ * @property string $season
+ * @property string $exam_period
+ * @property string $doc_type
+ * @property string|null $openai_file_id
+ * @property string|null $vector_store_file_id
+ * @property Question|null $question
+ */
 class PdfFile extends Model
 {
     protected $fillable = [
@@ -88,7 +104,7 @@ class PdfFile extends Model
         };
     }
 
-    public function getFullDisplayName(): string
+    public function getDisplayName(): string
     {
         return "{$this->year}年 ({$this->getYearGengo()}) {$this->getSeasonName()} {$this->getPeriodName()}";
     }

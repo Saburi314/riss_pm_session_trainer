@@ -19,9 +19,9 @@ class PdfFileResource extends Resource
     protected static ?string $model = PdfFile::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-duplicate';
-    protected static ?string $navigationLabel = 'PDFソース管理';
-    protected static ?string $modelLabel = 'PDFファイル';
-    protected static ?string $pluralModelLabel = 'PDFソース管理';
+    protected static ?string $navigationLabel = 'PDF・設問管理';
+    protected static ?string $modelLabel = 'PDF・設問';
+    protected static ?string $pluralModelLabel = 'PDF・設問管理';
     protected static ?int $navigationSort = 30;
 
     public static function form(Form $form): Form

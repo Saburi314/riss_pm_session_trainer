@@ -75,7 +75,7 @@ class ExerciseController extends Controller
     {
         return response()->json([
             'status' => 'success',
-            'form' => $pdf->answer_form_json
+            'form' => $pdf->question?->data
         ]);
     }
 
