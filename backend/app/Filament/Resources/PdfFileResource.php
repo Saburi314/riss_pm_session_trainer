@@ -190,52 +190,11 @@ class PdfFileResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('sync')
-                    ->label('ベクトルストアと同期')
-                    ->tooltip('このファイルをAIが読み込めるように（Vector Storeへ）転送します。')
-                    ->icon('heroicon-o-cloud-arrow-up')
-                    ->color('success')
-                    ->visible(fn(\App\Models\PdfFile $record): bool => $record->index_status !== 'completed')
-                    ->requiresConfirmation()
-                    ->modalHeading('ベクトルストア同期の実行')
-                    ->modalDescription('このファイルをOpenAIのベクトルストアに送信し、AIが検索・利用できる状態にします。')
-                    ->action(function (\App\Models\PdfFile $record, \App\Services\VectorStoreService $service): void {
-                        try {
-                            set_time_limit(600); // 10分まで実行を許可
-                            $service->syncFile($record, false); // 既存のテキストがあればスキップ
-                            \Filament\Notifications\Notification::make()
-                                ->title('同期成功')
-                                ->success()
-                                ->send();
-                        } catch (\Exception $e) {
-                            \Filament\Notifications\Notification::make()
-                                ->title('同期失敗')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('syncSelected')
-                        ->label('選択したファイルをベクトルストアと同期')
-                        ->icon('heroicon-o-cloud-arrow-up')
-                        ->requiresConfirmation()
-                        ->action(function (\Illuminate\Support\Collection $records, \App\Services\VectorStoreService $service): void {
-                            set_time_limit(0); // 無制限
-                            $records->each(function ($record) use ($service) {
-                                if ($record->index_status !== 'completed') {
-                                    $service->syncFile($record, false); // 既存のテキストがあればスキップ
-                                }
-                            });
-                            \Filament\Notifications\Notification::make()
-                                ->title('選択したファイルの同期が完了しました')
-                                ->success()
-                                ->send();
-                        }),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
