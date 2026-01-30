@@ -15,20 +15,32 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 管理者アカウントの作成/更新
+        // 管理者アカウントの作成/更新（.envから読み込み）
+        $adminEmail = env('ADMIN_EMAIL', 'admin@example.com');
+        $adminPassword = env('ADMIN_PASSWORD', 'password');
+        $adminName = env('ADMIN_NAME', 'Admin User');
+
         User::updateOrCreate(
-            ['email' => 'admin@example.com'],
+            ['email' => $adminEmail],
             [
-                'name' => 'Admin User',
-                'password' => bcrypt('password'),
+                'name' => $adminName,
+                'password' => bcrypt($adminPassword),
+                'role' => 'admin',
+                'email_verified_at' => now(),
             ]
         );
 
-        // テストユーザーの作成/更新
-        User::updateOrCreate(
-            ['email' => 'test@example.com'],
-            ['name' => 'Test User']
-        );
+        // テストユーザーの作成/更新（開発環境のみ）
+        if (app()->environment('local')) {
+            User::updateOrCreate(
+                ['email' => 'test@example.com'],
+                [
+                    'name' => 'Test User',
+                    'password' => bcrypt('password'),
+                    'role' => 'user',
+                ]
+            );
+        }
 
         $this->call([
             CategorySeeder::class,
