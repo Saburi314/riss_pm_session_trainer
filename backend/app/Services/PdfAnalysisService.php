@@ -169,10 +169,15 @@ class PdfAnalysisService
         if (!file_exists($dir))
             mkdir($dir, 0777, true);
 
-        $path = $dir . '/' . $pdfFile->filename . '.txt';
+        $filename = $pdfFile->filename . '.txt';
+        $path = $dir . '/' . $filename;
         file_put_contents($path, $content);
 
-        Log::info("Searchable text saved: {$path}");
+        // DBに相対パスを保存（storage/app からの相対パス）
+        $relativePath = 'searchable_texts/' . $filename;
+        $pdfFile->update(['searchable_text_path' => $relativePath]);
+
+        Log::info("Searchable text saved: {$path} (DB path: {$relativePath})");
     }
 
     private function validateConfig(): void

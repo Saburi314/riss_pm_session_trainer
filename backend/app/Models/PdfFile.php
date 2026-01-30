@@ -27,6 +27,7 @@ class PdfFile extends Model
         'filename',
         'storage_disk',
         'storage_path',
+        'searchable_text_path',
         'size',
 
         // 試験メタ情報
@@ -130,6 +131,13 @@ class PdfFile extends Model
      */
     public function getSearchableTextPath(): ?string
     {
+        // DBに保存されているパスを優先
+        if ($this->searchable_text_path) {
+            $path = storage_path('app/' . $this->searchable_text_path);
+            return file_exists($path) ? $path : null;
+        }
+
+        // 後方互換性: DBにパスがない場合は従来の方法で探す
         $path = storage_path('app/searchable_texts/' . $this->filename . '.txt');
         return file_exists($path) ? $path : null;
     }
