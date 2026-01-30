@@ -47,35 +47,6 @@ class ListPdfFiles extends ListRecords
                             ->send();
                     }
                 }),
-            Actions\Action::make('syncVectorStore')
-                ->label('ベクトルストアと一括同期')
-                ->tooltip('DBの未同期ファイルをベクトルストアに転送します。')
-                ->icon('heroicon-o-cloud-arrow-up')
-                ->color('warning')
-                ->requiresConfirmation()
-                ->modalHeading('ベクトルストアへの同期')
-                ->modalDescription('まだ同期されていないファイルや、前回失敗・タイムアウトしたファイルをすべて転送します。')
-                ->action(function () {
-                    // 大量のファイルを同期する場合に備えてタイムアウトを無効化
-                    set_time_limit(0);
-
-                    $exitCode = \Illuminate\Support\Facades\Artisan::call('vs:sync', [
-                        '--limit' => 1000,
-                    ]);
-
-                    if ($exitCode === 0) {
-                        \Filament\Notifications\Notification::make()
-                            ->title('ベクトルストア同期完了')
-                            ->body('ファイルがベクトルストアに認識されるようになりました。')
-                            ->success()
-                            ->send();
-                    } else {
-                        \Filament\Notifications\Notification::make()
-                            ->title('ベクトルストア同期失敗')
-                            ->danger()
-                            ->send();
-                    }
-                }),
         ];
     }
 }
