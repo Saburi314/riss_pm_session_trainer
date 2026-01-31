@@ -124,7 +124,6 @@ class ExerciseController extends Controller
                 ->whereDate('created_at', now()->toDateString())
                 ->where(function ($query) {
                     $query->whereNotNull('past_paper_id')
-                        ->orWhereNotNull('ai_question_id')
                         ->orWhereNotNull('exercise_text');
                 })
                 ->count();

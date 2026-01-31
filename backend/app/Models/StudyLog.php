@@ -13,7 +13,6 @@ class StudyLog extends Model
     protected $fillable = [
         'user_id',
         'past_paper_id',
-        'ai_question_id',
         'category_id',
         'subcategory_id',
         'answer_data',
@@ -37,7 +36,8 @@ class StudyLog extends Model
         if ($this->past_paper_id) {
             return 'past_paper';
         }
-        if ($this->ai_question_id) {
+        // AI生成問題はexercise_textが存在する場合
+        if ($this->exercise_text) {
             return 'ai';
         }
         return 'unknown';
@@ -48,10 +48,7 @@ class StudyLog extends Model
         return $this->belongsTo(PastPaper::class, 'past_paper_id');
     }
 
-    public function aiQuestion(): BelongsTo
-    {
-        return $this->belongsTo(AiQuestion::class, 'ai_question_id');
-    }
+
 
     public function user(): BelongsTo
     {
