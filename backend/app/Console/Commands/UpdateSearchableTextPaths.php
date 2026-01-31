@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\PdfFile;
+use App\Models\PastPaper;
 use Illuminate\Console\Command;
 
 class UpdateSearchableTextPaths extends Command
@@ -30,7 +30,7 @@ class UpdateSearchableTextPaths extends Command
         foreach ($files as $filePath) {
             $filename = basename($filePath, '.txt'); // Remove .txt extension
 
-            $pdfFile = PdfFile::where('filename', $filename)->first();
+            $pdfFile = PastPaper::where('filename', $filename)->first();
 
             if (!$pdfFile) {
                 $this->warn("  PDF record not found for: {$filename}");

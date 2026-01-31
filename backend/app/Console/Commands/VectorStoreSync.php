@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\PdfFile;
+use App\Models\PastPaper;
 use App\Services\VectorStoreService;
 use Illuminate\Console\Command;
 
@@ -40,7 +40,7 @@ class VectorStoreSync extends Command
             $this->info("Cleared: {$stats['vector_store']} from store, {$stats['storage']} from storage.");
 
             // 全レコードのステータスを pending にリセット
-            \App\Models\PdfFile::query()->update([
+            PastPaper::query()->update([
                 'openai_file_id' => null,
                 'vector_store_file_id' => null,
                 'index_status' => 'pending',
@@ -67,7 +67,7 @@ class VectorStoreSync extends Command
         }
 
         // 2. 同期対象のPDFを取得
-        $query = \App\Models\PdfFile::query();
+        $query = PastPaper::query();
         if (!$clear) {
             $query->whereIn('index_status', ['pending', 'failed', 'cancelled', 'in_progress']);
         }

@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Filament\Resources\PdfFileResource\Pages;
+namespace App\Filament\Resources\PastPaperResource\Pages;
 
-use App\Filament\Resources\PdfFileResource;
+use App\Filament\Resources\PastPaperResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
-class EditPdfFile extends EditRecord
+class EditPastPaper extends EditRecord
 {
-    protected static string $resource = PdfFileResource::class;
+    protected static string $resource = PastPaperResource::class;
 
     protected function getHeaderActions(): array
     {

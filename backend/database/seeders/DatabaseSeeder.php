@@ -44,7 +44,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             CategorySeeder::class,
-            SecurityTriviaSeeder::class,
+            TriviaSeeder::class,
         ]);
     }
 }

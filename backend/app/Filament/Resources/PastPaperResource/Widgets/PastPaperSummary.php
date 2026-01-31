@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Filament\Resources\PdfFileResource\Widgets;
+namespace App\Filament\Resources\PastPaperResource\Widgets;
 
-use App\Models\PdfFile;
+use App\Models\PastPaper;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\DB;
 
-class PdfFileSummary extends Widget
+class PastPaperSummary extends Widget
 {
-    protected static string $view = 'filament.resources.pdf-file-resource.widgets.pdf-file-summary';
+    protected static string $view = 'filament.resources.past-paper-resource.widgets.past-paper-summary';
 
     protected int|string|array $columnSpan = 'full';
 
     public function getData(): array
     {
-        $stats = PdfFile::select('year', 'season', DB::raw('count(*) as count'))
+        $stats = PastPaper::select('year', 'season', DB::raw('count(*) as count'))
             ->groupBy('year', 'season')
             ->orderBy('year', 'desc')
             ->get();

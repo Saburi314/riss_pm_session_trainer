@@ -2,9 +2,8 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\SecurityTriviaResource\Pages;
-use App\Filament\Resources\SecurityTriviaResource\RelationManagers;
-use App\Models\SecurityTrivia;
+use App\Filament\Resources\TriviaResource\Pages;
+use App\Models\Trivia;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -13,9 +12,9 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class SecurityTriviaResource extends Resource
+class TriviaResource extends Resource
 {
-    protected static ?string $model = SecurityTrivia::class;
+    protected static ?string $model = Trivia::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-information-circle';
     protected static ?string $navigationLabel = '豆知識管理';
@@ -86,9 +85,9 @@ class SecurityTriviaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSecurityTrivia::route('/'),
-            'create' => Pages\CreateSecurityTrivia::route('/create'),
-            'edit' => Pages\EditSecurityTrivia::route('/{record}/edit'),
+            'index' => Pages\ListTrivias::route('/'),
+            'create' => Pages\CreateTrivia::route('/create'),
+            'edit' => Pages\EditTrivia::route('/{record}/edit'),
         ];
     }
 }

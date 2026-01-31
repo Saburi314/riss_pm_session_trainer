@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\PdfFile;
+use App\Models\PastPaper;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -31,7 +31,7 @@ class VectorStoreService
      * PDFファイルをOpenAIと同期します。
      * 各ステップごとにDBを更新し、中断しても続きから再開できるようにします。
      */
-    public function syncFile(PdfFile $pdfFile, bool $forceOcr = false): array
+    public function syncFile(PastPaper $pastPaper, bool $forceOcr = false): array
     {
         if (!$this->apiKey || !$this->vectorStoreId) {
             throw new \RuntimeException('OpenAI API key or Vector Store ID is not configured.');
@@ -40,48 +40,48 @@ class VectorStoreService
         try {
             // ステップ 0: 解析 (OCR/Text 抽出) の実行
             // 既に解析済み & .txt ファイルが存在する場合はスキップ（force-ocr 時を除く）
-            $searchableTextPath = $pdfFile->getSearchableTextPath();
+            $searchableTextPath = $pastPaper->getSearchableTextPath();
 
             if ($searchableTextPath && !$forceOcr) {
-                Log::info("Step 0/3: Searchable text already exists, skipping analysis for {$pdfFile->filename}");
+                Log::info("Step 0/3: Searchable text already exists, skipping analysis for {$pastPaper->filename}");
             } else {
-                Log::info("Step 0/3: Analyzing PDF for {$pdfFile->filename}");
-                $this->analysisService->analyze($pdfFile);
+                Log::info("Step 0/3: Analyzing PDF for {$pastPaper->filename}");
+                $this->analysisService->analyze($pastPaper);
             }
 
             // ステップ 1: OpenAI Files API へのアップロード
             // ファイルが更新されている可能性(force-ocr等)があるため、
             // 既存のファイルがあれば削除してから再アップロードする
-            if ($pdfFile->openai_file_id) {
-                Log::info("Step 1/3: Removing old file from OpenAI: {$pdfFile->openai_file_id}");
-                $this->deleteFileFromOpenAI($pdfFile->openai_file_id);
-                $pdfFile->update(['openai_file_id' => null, 'vector_store_file_id' => null]);
+            if ($pastPaper->openai_file_id) {
+                Log::info("Step 1/3: Removing old file from OpenAI: {$pastPaper->openai_file_id}");
+                $this->deleteFileFromOpenAI($pastPaper->openai_file_id);
+                $pastPaper->update(['openai_file_id' => null, 'vector_store_file_id' => null]);
             }
 
-            Log::info("Step 1/3: Uploading new searchable file to OpenAI: {$pdfFile->filename}");
-            $openaiFileId = $this->uploadToFilesApi($pdfFile);
-            $pdfFile->update(['openai_file_id' => $openaiFileId]);
+            Log::info("Step 1/3: Uploading new searchable file to OpenAI: {$pastPaper->filename}");
+            $openaiFileId = $this->uploadToFilesApi($pastPaper);
+            $pastPaper->update(['openai_file_id' => $openaiFileId]);
 
             // ステップ 2: ベクトルストアへの追加 (IDがない、または前回失敗/キャンセルの場合に実行)
             $unstableStatuses = ['failed', 'cancelled', 'pending', null];
-            if (!$pdfFile->vector_store_file_id || in_array($pdfFile->index_status, $unstableStatuses)) {
-                Log::info("Step 2/3: Adding to Vector Store: {$pdfFile->openai_file_id}");
-                $result = $this->addToVectorStore($pdfFile->openai_file_id, $pdfFile);
+            if (!$pastPaper->vector_store_file_id || in_array($pastPaper->index_status, $unstableStatuses)) {
+                Log::info("Step 2/3: Adding to Vector Store: {$pastPaper->openai_file_id}");
+                $result = $this->addToVectorStore($pastPaper->openai_file_id, $pastPaper);
 
-                $pdfFile->update([
+                $pastPaper->update([
                     'vector_store_file_id' => $result['id'],
                     'index_status' => $result['status'],
                 ]);
             } else {
-                Log::info("Step 2/3: Already in Vector Store. ID: {$pdfFile->vector_store_file_id} (Status: {$pdfFile->index_status})");
+                Log::info("Step 2/3: Already in Vector Store. ID: {$pastPaper->vector_store_file_id} (Status: {$pastPaper->index_status})");
             }
 
             // ステップ 3: 完了待機ポーリング (完了するまでループ)
-            if ($pdfFile->index_status !== 'completed') {
-                Log::info("Step 3/3: Waiting for completion. Current status: {$pdfFile->index_status}");
-                $result = $this->waitForCompletion($pdfFile->vector_store_file_id);
+            if ($pastPaper->index_status !== 'completed') {
+                Log::info("Step 3/3: Waiting for completion. Current status: {$pastPaper->index_status}");
+                $result = $this->waitForCompletion($pastPaper->vector_store_file_id);
 
-                $pdfFile->update([
+                $pastPaper->update([
                     'index_status' => $result['status'],
                     'indexed_at' => $result['status'] === 'completed' ? now() : null,
                     'error_message' => $result['error_message'] ?? null,
@@ -91,7 +91,7 @@ class VectorStoreService
             }
 
             return [
-                'id' => $pdfFile->vector_store_file_id,
+                'id' => $pastPaper->vector_store_file_id,
                 'status' => 'completed',
                 'error_message' => null,
             ];
@@ -102,8 +102,8 @@ class VectorStoreService
                 Log::warning("File already exists in Vector Store, proceeding to wait step.");
             }
 
-            Log::error("Sync failed for PDF {$pdfFile->id}: " . $e->getMessage());
-            $pdfFile->update([
+            Log::error("Sync failed for PDF {$pastPaper->id}: " . $e->getMessage());
+            $pastPaper->update([
                 'index_status' => 'failed',
                 'error_message' => $e->getMessage(),
             ]);
@@ -111,11 +111,11 @@ class VectorStoreService
         }
     }
 
-    private function uploadToFilesApi(PdfFile $pdfFile): string
+    private function uploadToFilesApi(PastPaper $pastPaper): string
     {
-        $searchablePath = $pdfFile->getSearchableTextPath();
-        $filePath = $searchablePath ?: $pdfFile->getFullStoragePath();
-        $displayFilename = $searchablePath ? $pdfFile->filename . '.txt' : $pdfFile->filename;
+        $searchablePath = $pastPaper->getSearchableTextPath();
+        $filePath = $searchablePath ?: $pastPaper->getFullStoragePath();
+        $displayFilename = $searchablePath ? $pastPaper->filename . '.txt' : $pastPaper->filename;
 
         if (!file_exists($filePath)) {
             throw new \RuntimeException("File not found on disk: {$filePath}");
@@ -153,7 +153,7 @@ class VectorStoreService
         }
     }
 
-    private function addToVectorStore(string $openaiFileId, PdfFile $pdfFile): array
+    private function addToVectorStore(string $openaiFileId, PastPaper $pastPaper): array
     {
         $response = Http::timeout(60)
             ->retry(3, 2000)

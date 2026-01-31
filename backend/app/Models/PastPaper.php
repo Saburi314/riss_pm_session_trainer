@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * App\Models\PdfFile
+ * App\Models\PastPaper
  *
  * @property int $id
  * @property string $filename
@@ -18,10 +20,12 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $doc_type
  * @property string|null $openai_file_id
  * @property string|null $vector_store_file_id
- * @property Question|null $question
+ * @property \Illuminate\Database\Eloquent\Collection|\App\Models\PastPaperQuestion[] $questions
  */
-class PdfFile extends Model
+class PastPaper extends Model
 {
+    protected $table = 'past_papers';
+
     protected $fillable = [
         // ファイル基本情報
         'filename',
@@ -66,11 +70,7 @@ class PdfFile extends Model
      */
     public function getDisplayNameAttribute(): string
     {
-        $gengo = $this->getYearGengo();
-        $season = $this->getSeasonName();
-        $period = $this->getPeriodName();
-
-        return "{$this->year}年 ({$gengo}) {$season} {$period}";
+        return $this->getDisplayName();
     }
 
     public function getYearGengo(): string
@@ -111,11 +111,19 @@ class PdfFile extends Model
     }
 
     /**
-     * 設問データとのリレーション (filenameベース)
+     * 設問データとのリレーション (IDベース)
      */
-    public function question(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function questions(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasOne(Question::class, 'filename', 'filename');
+        return $this->hasMany(PastPaperQuestion::class, 'past_paper_id');
+    }
+
+    /**
+     * 模範解答とのリレーション (IDベース)
+     */
+    public function pastPaperAnswers(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PastPaperAnswer::class, 'past_paper_id');
     }
 
     /**

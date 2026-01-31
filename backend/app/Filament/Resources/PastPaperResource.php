@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\PdfFileResource\Pages;
-use App\Filament\Resources\PdfFileResource\RelationManagers;
-use App\Models\PdfFile;
+use App\Filament\Resources\PastPaperResource\Pages;
+use App\Filament\Resources\PastPaperResource\RelationManagers;
+use App\Models\PastPaper;
+use App\Models\PastPaperQuestion;
+use App\Models\PastPaperAnswer;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -14,9 +16,9 @@ use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class PdfFileResource extends Resource
+class PastPaperResource extends Resource
 {
-    protected static ?string $model = PdfFile::class;
+    protected static ?string $model = PastPaper::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-duplicate';
     protected static ?string $navigationLabel = 'PDF・設問管理';
@@ -203,15 +205,16 @@ class PdfFileResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\PastPaperQuestionRelationManager::class,
+            RelationManagers\PastPaperAnswerRelationManager::class,
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPdfFiles::route('/'),
-            'edit' => Pages\EditPdfFile::route('/{record}/edit'),
+            'index' => Pages\ListPastPapers::route('/'),
+            'edit' => Pages\EditPastPaper::route('/{record}/edit'),
         ];
     }
 }

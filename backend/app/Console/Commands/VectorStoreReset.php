@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\PdfFile;
+use App\Models\PastPaper;
 use App\Services\VectorStoreService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +31,7 @@ class VectorStoreReset extends Command
 
         $this->info('2. ローカルデータベースのステータスをリセット中...');
         try {
-            PdfFile::query()->update([
+            PastPaper::query()->update([
                 'openai_file_id' => null,
                 'vector_store_file_id' => null,
                 'index_status' => 'pending',

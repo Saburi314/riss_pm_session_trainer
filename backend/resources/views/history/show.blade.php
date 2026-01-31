@@ -7,7 +7,7 @@
         <h2 class="section-header mb-24">
             <span class="indicator {{ $history->exercise_type === 'past_paper' ? 'secondary' : 'primary' }}"></span>
             @if($history->exercise_type === 'past_paper')
-                過去問演習詳細: {{ $history->pdfFile ? $history->pdfFile->display_name : '不明' }}
+                過去問演習詳細: {{ $history->pastPaper ? $history->pastPaper->display_name : '不明' }}
             @else
                 AI生成演習詳細: {{ $history->subcategory?->name ?? '全般' }}
             @endif

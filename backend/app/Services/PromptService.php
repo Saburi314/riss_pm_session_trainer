@@ -15,9 +15,10 @@ class PromptService
         return RissPrompts::getGeneratePrompt($context);
     }
 
-    public function buildScorePrompt(string $exerciseText, string $userAnswer, ?string $category, ?string $subcategory): string
+    public function buildScorePrompt(string $exerciseText, string $userAnswer, ?string $category, ?string $subcategory, ?array $sampleAnswers = []): string
     {
         $context = Category::getCategoryAndSubcategoryNames($category, $subcategory);
+        $context['sample_answers'] = $sampleAnswers;
         return RissPrompts::getScorePrompt($exerciseText, $userAnswer, $context);
     }
 }

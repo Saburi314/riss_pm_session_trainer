@@ -5,6 +5,7 @@ import * as api from './modules/api.js';
 import { APP_CONFIG } from './modules/constants.js';
 import { PastPaperSelector } from './modules/PastPaperSelector.js';
 import { ExerciseRenderer } from './modules/ExerciseRenderer.js';
+import { QuestionSelector } from './modules/QuestionSelector.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const { mode, categories, pastPapers, currentSubcategory, defaultLabel, noSelectionLabel, exerciseRaw, scoringRaw } = window.RissApp || {};
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scoringContent: document.getElementById('scoring-content'),
         answerCard: document.getElementById('answer-card'),
         pdfFileIdHidden: document.getElementById('pdf_file_id_hidden'),
+        questionSelectorContainer: document.getElementById('question-selector-container'),
     };
 
     const renderer = new ExerciseRenderer(elements);
@@ -41,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectPeriod: elements.selectPeriod,
         pastPapers: pastPapers
     });
+    const questionSelector = new QuestionSelector(elements.questionSelectorContainer);
 
     // --- AI演習モードのカテゴリ同期 ---
     if (elements.categorySelect) {
@@ -62,29 +65,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 await trivia.fetchTrivia(cat);
                 trivia.start(APP_CONFIG.TRIVIA_INTERVAL);
 
+                // PDFを表示
                 elements.pdfViewer.src = `/exercise/pdf/${pdfId}`;
                 elements.pdfCard.classList.remove('hidden');
 
-                const res = await api.get(`/exercise/form/${pdfId}`);
-                renderer.renderDynamicForm(res.form, pdfId);
+                // 問題データと解答済み問題を取得
+                const res = await api.get(`/exercise/questions/${pdfId}`);
 
-                const title = `過去問演習: ${elements.selectYear.options[elements.selectYear.selectedIndex].text} ${elements.selectSeason.options[elements.selectSeason.selectedIndex].text} ${elements.selectPeriod.options[elements.selectPeriod.selectedIndex].text}`;
-                elements.scoreForm.querySelector('[name="exercise_text"]').value = title;
-                elements.pdfFileIdHidden.value = pdfId;
+                // 問題選択UIを表示
+                questionSelector.render(res.questions_data, res.solved_questions || []);
+                elements.questionSelectorContainer.classList.remove('hidden');
 
-                elements.answerCard.classList.remove('hidden');
-                elements.exerciseCard.classList.add('hidden');
+                // 問題選択確定時の処理
+                questionSelector.setOnConfirm(async (selectedQuestions) => {
+                    try {
+                        // 問題選択UIを非表示
+                        questionSelector.hide();
 
-                const recordData = new FormData();
-                const token = document.querySelector('input[name="_token"]')?.value || '';
-                recordData.append('_token', token);
-                recordData.append('pdf_file_id', pdfId);
-                recordData.append('exercise_text', title);
+                        // 選択された問題の解答フォームを生成
+                        renderer.renderQuestionAnswerForm(res.questions_data, selectedQuestions, pdfId);
 
-                const recordRes = await api.post('/exercise/record-generation', recordData);
-                if (recordRes.log_id) {
-                    window.RissApp.currentLogId = recordRes.log_id;
-                }
+                        const title = `過去問演習: ${elements.selectYear.options[elements.selectYear.selectedIndex].text} ${elements.selectSeason.options[elements.selectSeason.selectedIndex].text} ${elements.selectPeriod.options[elements.selectPeriod.selectedIndex].text}`;
+                        elements.scoreForm.querySelector('[name="exercise_text"]').value = title;
+                        elements.pdfFileIdHidden.value = pdfId;
+
+                        elements.answerCard.classList.remove('hidden');
+                        elements.exerciseCard.classList.add('hidden');
+
+                        // 学習ログを記録
+                        const recordData = new FormData();
+                        const token = document.querySelector('input[name="_token"]')?.value || '';
+                        recordData.append('_token', token);
+                        recordData.append('pdf_file_id', pdfId);
+                        recordData.append('exercise_text', title);
+                        recordData.append('selected_questions', JSON.stringify(selectedQuestions));
+
+                        const recordRes = await api.post('/exercise/record-generation', recordData);
+                        if (recordRes.log_id) {
+                            window.RissApp.currentLogId = recordRes.log_id;
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        alert('エラーが発生しました: ' + error.message);
+                    }
+                });
+
             } catch (error) {
                 console.error(error);
                 alert('エラーが発生しました: ' + error.message);

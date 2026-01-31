@@ -23,13 +23,15 @@ class ExerciseController extends Controller
         $exerciseText = null;
         $category = null;
         $subcategory = null;
+        $answerData = null;
 
         // 再挑戦用: DBから取得
         $retakeLogId = $request->query('retake_log_id');
         if ($retakeLogId) {
             $log = StudyLog::find($retakeLogId);
             if ($log && $log->user_id === Auth::id()) {
-                $exerciseText = $log->exercise_text;
+                $answerData = $log->answer_data;
+                $exerciseText = $answerData['exercise_text'] ?? null;
                 $category = $log->subcategory?->category?->code;
                 $subcategory = $log->subcategory?->code;
             }
@@ -37,7 +39,7 @@ class ExerciseController extends Controller
 
         $pastPapers = null;
         if ($mode === 'past_paper') {
-            $pastPapers = \App\Models\PdfFile::where('doc_type', 'question') // 重複排除のため問題ファイルのみ取得
+            $pastPapers = \App\Models\PastPaper::where('doc_type', 'question') // 重複排除のため問題ファイルのみ取得
                 ->whereIn('exam_period', ['pm', 'pm1', 'pm2'])
                 ->orderBy('year', 'desc')
                 ->orderBy('season', 'desc')
@@ -55,10 +57,10 @@ class ExerciseController extends Controller
                 });
         }
 
-        return view('exercise.index', compact('categories', 'mode', 'pastPapers', 'exerciseText', 'category', 'subcategory'));
+        return view('exercise.index', compact('categories', 'mode', 'pastPapers', 'exerciseText', 'category', 'subcategory', 'answerData'));
     }
 
-    public function viewPdf(\App\Models\PdfFile $pdf)
+    public function viewPdf(\App\Models\PastPaper $pdf)
     {
         $path = $pdf->getFullStoragePath();
         if (!file_exists($path)) {
@@ -71,11 +73,40 @@ class ExerciseController extends Controller
         ]);
     }
 
-    public function getForm(\App\Models\PdfFile $pdf)
+    public function getForm(\App\Models\PastPaper $pdf)
     {
         return response()->json([
             'status' => 'success',
-            'form' => $pdf->question?->data
+            'form' => $pdf->questions()->first()?->data
+        ]);
+    }
+
+    /**
+     * 問題データと解答済み問題を取得
+     */
+    public function getQuestions(\App\Models\PastPaper $pdf)
+    {
+        $questionsData = $pdf->questions()->first()?->data;
+
+        // 解答済みの問題番号を取得
+        $solvedQuestions = [];
+        if (Auth::check()) {
+            $solvedQuestions = StudyLog::where('user_id', Auth::id())
+                ->where('past_paper_id', $pdf->id)
+                ->get()
+                ->map(function ($log) {
+                    return $log->answer_data['question_number'] ?? null;
+                })
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'questions_data' => $questionsData,
+            'solved_questions' => $solvedQuestions,
         ]);
     }
 
@@ -84,7 +115,12 @@ class ExerciseController extends Controller
         if (Auth::check()) {
             $todayCount = StudyLog::where('user_id', Auth::id())
                 ->whereDate('created_at', now()->toDateString())
-                ->whereIn('exercise_type', ['ai_generated', 'past_paper']) // 採点や生成の合計
+                ->whereDate('created_at', now()->toDateString())
+                ->where(function ($query) {
+                    $query->whereNotNull('past_paper_id')
+                        ->orWhereNotNull('ai_question_id')
+                        ->orWhereNotNull('exercise_text');
+                })
                 ->count();
 
             if (!Auth::user()->isAdmin() && $todayCount >= 20) {
@@ -112,7 +148,6 @@ class ExerciseController extends Controller
                 'category_id' => $catModel?->id,
                 'subcategory_id' => $subModel?->id,
                 'exercise_text' => $exerciseText,
-                'exercise_type' => 'ai_generated',
             ]);
             $logId = $log->id;
         }
@@ -132,7 +167,8 @@ class ExerciseController extends Controller
             'category' => 'nullable|string',
             'subcategory' => 'nullable|string',
             'exercise_text' => 'required|string',
-            'pdf_file_id' => 'nullable|integer',
+            'past_paper_id' => 'nullable|integer',
+            'question_number' => 'nullable|integer',
         ]);
 
         if (!Auth::check()) {
@@ -141,8 +177,9 @@ class ExerciseController extends Controller
 
         $category = $request->input('category');
         $subcategory = $request->input('subcategory');
-        $pdfFileId = $request->input('pdf_file_id');
-        $exerciseType = $pdfFileId ? 'past_paper' : 'ai_generated';
+        $pastPaperId = $request->input('past_paper_id');
+        $questionNumber = $request->input('question_number');
+        $exerciseType = $pastPaperId ? 'past_paper' : 'ai_generated';
 
         [$catModel, $subModel] = $exerciseService->resolveCategoryModels($category, $subcategory);
 
@@ -150,9 +187,11 @@ class ExerciseController extends Controller
             'user_id' => Auth::id(),
             'category_id' => $catModel?->id,
             'subcategory_id' => $subModel?->id,
+            'past_paper_id' => $pastPaperId,
             'exercise_text' => $request->input('exercise_text'),
-            'pdf_file_id' => $pdfFileId,
-            'exercise_type' => $exerciseType,
+            'answer_data' => [
+                'question_number' => $questionNumber,
+            ],
         ]);
 
         return response()->json([
@@ -168,8 +207,31 @@ class ExerciseController extends Controller
         $exerciseText = $request->input('exercise_text', '');
         $userAnswer = $request->input('user_answer', '');
 
-        $prompt = $promptService->buildScorePrompt($exerciseText, $userAnswer, $category, $subcategory);
+        // 過去問モードの場合の追加情報
+        $pastPaperId = $request->input('past_paper_id');
+        $questionNumber = $request->input('question_number');
+        $answerDetails = $request->input('answer_details'); // array (casted from JSON)
 
+        // 模範解答を取得（過去問モードのみ）
+        $sampleAnswers = [];
+        if ($pastPaperId && $questionNumber) {
+            $pdf = \App\Models\PastPaper::find($pastPaperId);
+            if ($pdf) {
+                // PastPaperAnswerのdata JSON内に question_number がある形式を想定
+                $sampleAnswers = \App\Models\PastPaperAnswer::where('past_paper_id', $pdf->id)
+                    ->get()
+                    ->filter(function ($a) use ($questionNumber) {
+                        return ($a->data['question_number'] ?? null) == $questionNumber;
+                    })
+                    ->values()
+                    ->toArray();
+            }
+        }
+
+        // プロンプト生成（模範解答を含める）
+        $prompt = $promptService->buildScorePrompt($exerciseText, $userAnswer, $category, $subcategory, $sampleAnswers);
+
+        // AI採点実行
         $scoringResult = $exerciseService->scoreExercise($prompt);
 
         // 学習履歴の更新
@@ -180,29 +242,37 @@ class ExerciseController extends Controller
             if ($logId) {
                 $log = StudyLog::find($logId);
                 if ($log && $log->user_id === Auth::id()) {
-                    $log->update([
+                    $newAnswerData = array_merge($log->answer_data ?? [], [
                         'user_answer' => $userAnswer,
+                        'answer_details' => $answerDetails,
+                        'question_number' => $questionNumber,
+                    ]);
+
+                    $log->update([
                         'score' => $score,
                         'feedback' => $scoringResult,
+                        'user_answer' => $userAnswer,
+                        'answer_data' => $newAnswerData,
                     ]);
                 }
             } else {
-                // 過去問演習などの場合、ここで新規作成されることがある
-                $pdfFileId = $request->input('pdf_file_id');
-                $exerciseType = $pdfFileId ? 'past_paper' : 'ai_generated';
-
+                // 新規作成
+                $exerciseType = $pastPaperId ? 'past_paper' : 'ai_generated';
                 [$catModel, $subModel] = $exerciseService->resolveCategoryModels($category, $subcategory);
 
                 StudyLog::create([
                     'user_id' => Auth::id(),
                     'category_id' => $catModel?->id,
                     'subcategory_id' => $subModel?->id,
-                    'exercise_text' => $exerciseText,
-                    'user_answer' => $userAnswer,
+                    'past_paper_id' => $pastPaperId,
                     'score' => $score,
                     'feedback' => $scoringResult,
-                    'pdf_file_id' => $pdfFileId,
-                    'exercise_type' => $exerciseType,
+                    'exercise_text' => $exerciseText,
+                    'user_answer' => $userAnswer,
+                    'answer_data' => [
+                        'answer_details' => $answerDetails,
+                        'question_number' => $questionNumber,
+                    ],
                 ]);
             }
         }
@@ -214,7 +284,7 @@ class ExerciseController extends Controller
             'exerciseText' => $exerciseText,
             'userAnswer' => $userAnswer,
             'scoringResult' => $scoringResult,
+            'score' => $score ?? null,
         ]);
     }
-
 }

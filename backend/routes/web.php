@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/exercise/pdf/{pdf}', [ExerciseController::class, 'viewPdf'])->name('exercise.pdf');
         Route::get('/exercise/form/{pdf}', [ExerciseController::class, 'getForm'])->name('exercise.form');
+        Route::get('/exercise/questions/{pdf}', [ExerciseController::class, 'getQuestions'])->name('exercise.questions');
 
         Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
         Route::get('/history/{history}', [HistoryController::class, 'show'])->name('history.show');

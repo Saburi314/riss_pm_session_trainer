@@ -100,6 +100,9 @@
     <iframe id="pdf-viewer" src="" width="100%" height="100%" frameborder="0"></iframe>
   </article>
 
+  {{-- 問題選択カード --}}
+  <div id="question-selector-container" class="hidden"></div>
+
   {{-- 演習問題カード --}}
   <article id="exercise-card" class="card hidden">
     <h2 class="section-header pb-16 mb-24">
@@ -163,6 +166,6 @@
           scoringRaw: @json($scoringResult ?? ''),
             defaultLabel: "{{ \App\Models\Category::DEFAULT_NAME }}",
               noSelectionLabel: "{{ \App\Models\Category::NO_SELECTION_REQUIRED_NAME }}"
-                              };
+                                };
   </script>
 @endsection

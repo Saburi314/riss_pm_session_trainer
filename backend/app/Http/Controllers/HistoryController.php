@@ -12,7 +12,7 @@ class HistoryController extends Controller
 {
     public function index()
     {
-        $logs = StudyLog::with(['subcategory.category', 'pdfFile'])
+        $logs = StudyLog::with(['subcategory.category', 'pastPaper'])
             ->where('user_id', Auth::id())
             ->latest()
             ->paginate(10);
@@ -26,7 +26,7 @@ class HistoryController extends Controller
             abort(403);
         }
 
-        $history->load(['subcategory.category', 'pdfFile']);
+        $history->load(['subcategory.category', 'pastPaper']);
 
         return view('history.show', compact('history'));
     }

@@ -30,7 +30,7 @@
                                     @if($log->exercise_type === 'past_paper')
                                         <span class="counter-tag"
                                             style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">過去問演習</span>
-                                        {{ $log->pdfFile ? $log->pdfFile->display_name : '過去問演習' }}
+                                        {{ $log->pastPaper ? $log->pastPaper->display_name : '過去問演習' }}
                                     @else
                                         <span class="counter-tag"
                                             style="background: #f0fdf4; color: #166534; border-color: #bbf7d0;">AI演習</span>

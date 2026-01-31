@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StudyLog extends Model
 {
@@ -11,33 +12,59 @@ class StudyLog extends Model
 
     protected $fillable = [
         'user_id',
+        'past_paper_id',
+        'ai_question_id',
         'category_id',
         'subcategory_id',
-        'exercise_text',
-        'user_answer',
+        'answer_data',
         'score',
         'feedback',
-        'pdf_file_id',
-        'exercise_type',
+        'exercise_text',
+        'user_answer',
+        'ai_analysis_data',
     ];
 
-    public function pdfFile()
+    protected $casts = [
+        'answer_data' => 'array',
+        'ai_analysis_data' => 'array',
+        'score' => 'integer',
+    ];
+
+    protected $appends = ['exercise_type'];
+
+    public function getExerciseTypeAttribute(): string
     {
-        return $this->belongsTo(PdfFile::class);
+        if ($this->past_paper_id) {
+            return 'past_paper';
+        }
+        if ($this->ai_question_id) {
+            return 'ai';
+        }
+        return 'unknown';
     }
 
-    public function user()
+    public function pastPaper(): BelongsTo
+    {
+        return $this->belongsTo(PastPaper::class, 'past_paper_id');
+    }
+
+    public function aiQuestion(): BelongsTo
+    {
+        return $this->belongsTo(AiQuestion::class, 'ai_question_id');
+    }
+
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function subcategory()
-    {
-        return $this->belongsTo(Subcategory::class);
-    }
-
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function subcategory(): BelongsTo
+    {
+        return $this->belongsTo(Subcategory::class);
     }
 }

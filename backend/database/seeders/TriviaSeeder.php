@@ -2,15 +2,15 @@
 
 namespace Database\Seeders;
 
-use App\Models\SecurityTrivia;
+use App\Models\Trivia;
 use Illuminate\Database\Seeder;
 
-class SecurityTriviaSeeder extends Seeder
+class TriviaSeeder extends Seeder
 {
     public function run(): void
     {
         // 既存のトリビアを一度削除（重複防止）
-        SecurityTrivia::truncate();
+        Trivia::truncate();
 
         $mgt = [
             ['category' => 'MANAGEMENT', 'content' => '物理的セキュリティ対策として、鍵付きキャビネットやICカードによる入退室管理、監視カメラの設置などが挙げられます。デジタル対策が万全でも、サーバ室に誰でも入れる状態では機密性を維持することは困難です。'],
@@ -228,7 +228,7 @@ class SecurityTriviaSeeder extends Seeder
 
         foreach ($allData as $item) {
             $category = \App\Models\Category::where('code', $item['category'])->first();
-            SecurityTrivia::create([
+            Trivia::create([
                 'content' => $item['content'],
                 'category_id' => $category?->id,
             ]);

@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Filament\Resources\PdfFileResource\Pages;
+namespace App\Filament\Resources\PastPaperResource\Pages;
 
-use App\Filament\Resources\PdfFileResource;
+use App\Filament\Resources\PastPaperResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
-class ListPdfFiles extends ListRecords
+class ListPastPapers extends ListRecords
 {
-    protected static string $resource = PdfFileResource::class;
+    protected static string $resource = PastPaperResource::class;
 
     protected function getHeaderWidgets(): array
     {
         return [
-            PdfFileResource\Widgets\PdfFileSummary::class,
+            \App\Filament\Resources\PastPaperResource\Widgets\PastPaperSummary::class,
         ];
     }
 

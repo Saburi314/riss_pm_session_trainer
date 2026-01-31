@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\PdfFile;
+use App\Models\PastPaper;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -113,13 +113,13 @@ class PdfBatchImport extends Command
                 }
 
                 // 既に登録済みかチェック（storage_path で判断）
-                $existing = PdfFile::where('storage_path', $targetPath)->first();
+                $existing = PastPaper::where('storage_path', $targetPath)->first();
                 if ($existing) {
                     $skippedCount++;
                     continue;
                 }
 
-                PdfFile::create([
+                PastPaper::create([
                     'filename' => $item['filename'],
                     'storage_disk' => $disk,
                     'storage_path' => $targetPath,
