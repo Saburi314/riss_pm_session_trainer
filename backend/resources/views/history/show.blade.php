@@ -39,7 +39,7 @@
 
         <div class="row">
             @if($history->score !== null)
-                <div class="flex-1 text-center mb-32">
+                <div class="flex-1 text-center">
                     <div class="score-badge"
                         style="background: {{ $history->score >= 80 ? 'var(--secondary)' : ($history->score >= 60 ? 'var(--primary)' : '#94a3b8') }}">
                         {{ $history->score }}
@@ -47,7 +47,7 @@
                     <p class="score-label">獲得スコア</p>
                 </div>
             @else
-                <div class="flex-1 text-center mb-32">
+                <div class="flex-1 text-center">
                     <div class="counter-tag"
                         style="background: #fef3c7; color: #92400e; padding: 12px 24px; border-radius: 20px;">
                         採点未完了
