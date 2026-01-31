@@ -6,6 +6,133 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* --- Paper Mode (Exam style) --- */
+/* Increased specificity to override exercise.css */
+body .container {
+  max-width: 1600px !important;
+  /* ULTRA WIDE to prevent overlap */
+  width: 95% !important;
+}
+
+.paper-mode {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  /* Removed border as per user request */
+  border-radius: 0 !important;
+  padding: 40px !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: none !important;
+  color: #000000 !important;
+}
+
+/* --- Split Layout --- */
+.exercise-split-container {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 32px !important;
+  /* Slightly more gap for clarity */
+  align-items: stretch !important;
+  margin-top: 24px !important;
+  width: 100% !important;
+}
+
+/* Ensure AI mode is also wide */
+.exercise-split-container:not(.hidden) {
+  display: flex !important;
+}
+
+.exercise-split-left {
+  flex: 1.6 !important;
+  /* Slightly more space for the problem text */
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.exercise-split-right {
+  flex: 1 !important;
+  min-width: 400px !important;
+  /* Prevent answer box from getting too narrow */
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Align heights of cards in split layout */
+.exercise-split-left>.card,
+.exercise-split-right>.card {
+  height: 100% !important;
+  margin-bottom: 0 !important;
+}
+
+@media (max-width: 1200px) {
+  .exercise-split-container {
+    flex-direction: column !important;
+  }
+}
+
+.paper-mode .section-header {
+  border-bottom: 2px solid #000000 !important;
+  margin-bottom: 24px !important;
+  color: #000000 !important;
+  padding-bottom: 8px !important;
+}
+
+.paper-mode .indicator {
+  display: none !important;
+}
+
+.paper-mode h2,
+.paper-mode h3,
+.paper-mode h4 {
+  color: #000000 !important;
+  border: none !important;
+}
+
+/* Radio button refinement for paper mode */
+.paper-mode .dynamic-input[type="radio"],
+.paper-mode .dynamic-input[type="checkbox"] {
+  border: 1px solid #000000 !important;
+  background: white !important;
+  width: auto !important;
+  /* Fix: Remove 100% width for radio/checkbox */
+  height: 1.25rem !important;
+  width: 1.25rem !important;
+  margin-right: 0.5rem !important;
+  flex-shrink: 0 !important;
+  /* Prevent circle from being squashed */
+}
+
+.paper-mode .section-text {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: #000000 !important;
+  font-size: 1.1rem !important;
+  font-weight: 500 !important;
+  line-height: 1.8 !important;
+  /* More line height for readability */
+}
+
+.paper-mode .answer-item label {
+  color: #000000 !important;
+  margin-bottom: 8px !important;
+  display: flex !important;
+  /* Ensure wrapping works with radio buttons */
+  align-items: flex-start !important;
+}
+
+.paper-mode label.cursor-pointer {
+  background: transparent !important;
+  display: inline-flex !important;
+  align-items: flex-start !important;
+  /* Top align for wrapped text */
+  flex-direction: row !important;
+  padding: 4px 0 !important;
 }

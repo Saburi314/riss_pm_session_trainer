@@ -1,5 +1,173 @@
 @extends('layouts.app')
 
+@section('container_class', 'container-' . $mode)
+
+@push('styles')
+  <style>
+    /* Width by Mode */
+    body .container.container-past_paper {
+      max-width: 2000px !important;
+      width: 98% !important;
+    }
+
+    body .container.container-ai_generated {
+      max-width: 1400px !important;
+      width: 95% !important;
+    }
+
+    body .container {
+      transition: none !important;
+    }
+
+    /* Layout for Past Paper (PDF) */
+    .container-past_paper .exercise-split-container {
+      display: flex !important;
+      gap: 32px !important;
+      align-items: stretch !important;
+      height: 90vh !important;
+      min-height: 600px !important;
+    }
+
+    .container-past_paper .exercise-split-left,
+    .container-past_paper .exercise-split-right {
+      display: flex !important;
+      flex-direction: column !important;
+      height: 100% !important;
+      flex: 1 !important;
+      /* Force 50/50 split */
+    }
+
+    .container-past_paper .exercise-split-left .card,
+    .container-past_paper .exercise-split-right .card {
+      height: 100% !important;
+      overflow-y: auto !important;
+    }
+
+    /* Layout for AI Generated (No forced height) */
+    .container-ai_generated .exercise-split-container {
+      display: flex !important;
+      gap: 32px !important;
+      align-items: flex-start !important;
+      height: auto !important;
+    }
+
+    .container-ai_generated .exercise-split-left,
+    .container-ai_generated .exercise-split-right {
+      height: auto !important;
+    }
+
+    .container-ai_generated .exercise-split-left .card,
+    .container-ai_generated .exercise-split-right .card {
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    /* Shared Card Styles */
+    .exercise-split-left .card,
+    .exercise-split-right .card {
+      background-color: #ffffff !important;
+      border: none !important;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+    }
+
+    .pdf-container-inner {
+      background-color: #f1f5f9 !important;
+      padding: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      /* Center PDF pages */
+    }
+
+    .pdf-container-inner canvas {
+      margin-bottom: 24px !important;
+      /* Gap between pages */
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1) !important;
+    }
+
+    .no-padding {
+      padding: 0 !important;
+    }
+
+    .paper-mode {
+      padding: 40px !important;
+    }
+
+    /* AI Generated Spacing */
+    .markdown-body p {
+      margin-bottom: 2rem !important;
+      line-height: 1.8 !important;
+    }
+
+    /* Choice text wrapping */
+    .answer-item label span,
+    .cursor-pointer span {
+      white-space: normal !important;
+      display: inline-block !important;
+      flex: 1 !important;
+    }
+
+    /* Tabs UI */
+    .question-tabs {
+      display: flex !important;
+      background: #f8fafc !important;
+      border-bottom: 2px solid #e2e8f0 !important;
+      padding: 0 20px !important;
+      gap: 4px !important;
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 50 !important;
+    }
+
+    .question-tab {
+      padding: 12px 24px !important;
+      border: none !important;
+      background: none !important;
+      font-weight: 700 !important;
+      color: #64748b !important;
+      cursor: pointer !important;
+      border-bottom: 3px solid transparent !important;
+      transition: all 0.2s !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+
+    .question-tab:hover {
+      background: #f1f5f9 !important;
+      color: #1e293b !important;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    .question-tab.active {
+      color: #4f46e5 !important;
+      border-bottom-color: #4f46e5 !important;
+      background: white !important;
+    }
+
+    .tab-content {
+      padding: 40px !important;
+      background: white !important;
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block !important;
+    }
+  </style>
+@endpush
+
+@push('scripts')
+  {{-- PDF.js for reliable embedding --}}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
+@endpush
+
 @section('content')
   <h1>{{ config('app.name') }}</h1>
 
@@ -95,54 +263,58 @@
     @endif
   </section>
 
-  {{-- PDF表示カード --}}
-  <article id="pdf-card" class="card hidden no-padding" style="height: 800px;">
-    <iframe id="pdf-viewer" src="" width="100%" height="100%" frameborder="0"></iframe>
-  </article>
-
   {{-- 問題選択カード --}}
   <div id="question-selector-container" class="hidden"></div>
 
-  {{-- 演習問題カード --}}
-  <article id="exercise-card" class="card hidden">
-    <h2 class="section-header pb-16 mb-24">
-      <span class="indicator primary"></span>
-      演習問題
-    </h2>
-    <div id="exercise-content" class="markdown-body"></div>
-  </article>
+  {{-- Split Layout Container --}}
+  <div class="exercise-split-container hidden" id="exercise-split-container">
+    {{-- Left Side: Problem --}}
+    <div class="exercise-split-left">
+      {{-- PDF表示カード --}}
+      <article id="pdf-card" class="card hidden no-padding" style="position: relative;">
+        <div id="pdf-viewer-container" class="pdf-container-inner" style="width: 100%;"></div>
+      </article>
 
-  {{-- 解答カード --}}
-  <section id="answer-card" class="card hidden">
-    <h2 class="section-header mb-16">
-      <span class="indicator secondary"></span>
-      解答入力
-    </h2>
-    <p class="answer-meta mb-24">
-      設問番号に対応した形式で解答を記入してください。
-    </p>
+      {{-- 演習問題カード --}}
+      <article id="exercise-card" class="card paper-mode hidden">
+        <h2 class="section-header pb-16 mb-24">
+          <span class="indicator primary"></span>
+          演習問題
+        </h2>
+        <div id="exercise-content" class="markdown-body"></div>
+      </article>
+    </div>
 
-    <div id="segment-counters" class="mb-16 display-flex-wrap-gap-8"></div>
+    {{-- Right Side: Answer --}}
+    <div class="exercise-split-right">
+      {{-- 解答カード (タブ形式) --}}
+      <article id="answer-card" class="card hidden no-padding"
+        style="display: flex; flex-direction: column; overflow: hidden;">
+        <div id="past-paper-tabs" class="question-tabs"></div>
 
-    <form id="form-score" method="post" action="{{ route('exercise.score') }}">
-      @csrf
-      <input type="hidden" name="category" value="{{ $category ?? '' }}">
-      <input type="hidden" name="subcategory" value="{{ $subcategory ?? '' }}">
-      <input type="hidden" name="exercise_text" value="{{ $exerciseText ?? '' }}">
-      <input type="hidden" name="pdf_file_id" id="pdf_file_id_hidden">
+        <div class="paper-mode" style="flex: 1; overflow-y: auto;">
+          <form id="form-score" method="post" action="{{ route('exercise.score') }}">
+            @csrf
+            <input type="hidden" name="category" value="{{ $category ?? '' }}">
+            <input type="hidden" name="subcategory" value="{{ $subcategory ?? '' }}">
+            <input type="hidden" name="exercise_text" value="{{ $exerciseText ?? '' }}">
+            <input type="hidden" name="past_paper_id" id="past_paper_id_hidden">
 
-      <div id="dynamic-form-container" class="mb-24"></div>
+            <div id="dynamic-form-container" class="mb-24"></div>
 
-      <textarea name="user_answer" id="user_answer"
-        placeholder="(1) 解答を入力してください...">{{ $userAnswer ?? "(1)\n(2)\n(3)" }}</textarea>
+            <textarea name="user_answer" id="user_answer" class="hidden"
+              placeholder="(1) 解答を入力してください...">{{ $userAnswer ?? "(1)\n(2)\n(3)" }}</textarea>
 
-      <div class="mt-32 text-center">
-        <button type="submit" class="secondary btn-large">
-          採点を開始する
-        </button>
-      </div>
-    </form>
-  </section>
+            <div class="mt-32 text-center">
+              <button type="submit" class="secondary btn-large">
+                採点を開始する
+              </button>
+            </div>
+          </form>
+        </div>
+      </article>
+    </div>
+  </div>
 
   {{-- 採点結果カード --}}
   <article id="score-result-card" class="card score-result-card hidden">
@@ -166,6 +338,6 @@
           scoringRaw: @json($scoringResult ?? ''),
             defaultLabel: "{{ \App\Models\Category::DEFAULT_NAME }}",
               noSelectionLabel: "{{ \App\Models\Category::NO_SELECTION_REQUIRED_NAME }}"
-                                };
+                                                                              };
   </script>
 @endsection

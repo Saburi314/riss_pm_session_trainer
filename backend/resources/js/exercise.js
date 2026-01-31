@@ -1,11 +1,15 @@
 import { UIManager } from './modules/ui.js';
+
+// PDF.js worker configuration
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 import { TriviaManager } from './modules/trivia.js';
 import { renderMermaid } from './modules/renderer.js';
 import * as api from './modules/api.js';
 import { APP_CONFIG } from './modules/constants.js';
 import { PastPaperSelector } from './modules/PastPaperSelector.js';
 import { ExerciseRenderer } from './modules/ExerciseRenderer.js';
-import { QuestionSelector } from './modules/QuestionSelector.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const { mode, categories, pastPapers, currentSubcategory, defaultLabel, noSelectionLabel, exerciseRaw, scoringRaw } = window.RissApp || {};
@@ -32,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreResultCard: document.getElementById('score-result-card'),
         scoringContent: document.getElementById('scoring-content'),
         answerCard: document.getElementById('answer-card'),
-        pdfFileIdHidden: document.getElementById('pdf_file_id_hidden'),
+        pastPaperIdHidden: document.getElementById('past_paper_id_hidden'),
         questionSelectorContainer: document.getElementById('question-selector-container'),
     };
 
@@ -43,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
         selectPeriod: elements.selectPeriod,
         pastPapers: pastPapers
     });
-    const questionSelector = new QuestionSelector(elements.questionSelectorContainer);
 
     // --- AI演習モードのカテゴリ同期 ---
     if (elements.categorySelect) {
@@ -65,50 +68,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 await trivia.fetchTrivia(cat);
                 trivia.start(APP_CONFIG.TRIVIA_INTERVAL);
 
-                // PDFを表示
-                elements.pdfViewer.src = `/exercise/pdf/${pdfId}`;
+                // 1. PDFを表示 (PDF.jsを使用)し、描画完了を待つ
+                await renderer.renderPdf(`/exercise/pdf/${pdfId}`);
                 elements.pdfCard.classList.remove('hidden');
 
-                // 問題データと解答済み問題を取得
+                // 2. 問題データと解答済み問題を取得
                 const res = await api.get(`/exercise/questions/${pdfId}`);
 
-                // 問題選択UIを表示
-                questionSelector.render(res.questions_data, res.solved_questions || []);
-                elements.questionSelectorContainer.classList.remove('hidden');
+                // 3. 自動的に全問をタブ形式で表示
+                if (res.status === 'success' && res.questions_data) {
+                    const allQuestions = res.questions_data.questions.map(q => q.question_number);
 
-                // 問題選択確定時の処理
-                questionSelector.setOnConfirm(async (selectedQuestions) => {
-                    try {
-                        // 問題選択UIを非表示
-                        questionSelector.hide();
+                    renderer.renderQuestionAnswerForm(res.questions_data, allQuestions, pdfId);
 
-                        // 選択された問題の解答フォームを生成
-                        renderer.renderQuestionAnswerForm(res.questions_data, selectedQuestions, pdfId);
-
-                        const title = `過去問演習: ${elements.selectYear.options[elements.selectYear.selectedIndex].text} ${elements.selectSeason.options[elements.selectSeason.selectedIndex].text} ${elements.selectPeriod.options[elements.selectPeriod.selectedIndex].text}`;
-                        elements.scoreForm.querySelector('[name="exercise_text"]').value = title;
-                        elements.pdfFileIdHidden.value = pdfId;
-
-                        elements.answerCard.classList.remove('hidden');
-                        elements.exerciseCard.classList.add('hidden');
-
-                        // 学習ログを記録
-                        const recordData = new FormData();
-                        const token = document.querySelector('input[name="_token"]')?.value || '';
-                        recordData.append('_token', token);
-                        recordData.append('pdf_file_id', pdfId);
-                        recordData.append('exercise_text', title);
-                        recordData.append('selected_questions', JSON.stringify(selectedQuestions));
-
-                        const recordRes = await api.post('/exercise/record-generation', recordData);
-                        if (recordRes.log_id) {
-                            window.RissApp.currentLogId = recordRes.log_id;
-                        }
-                    } catch (error) {
-                        console.error(error);
-                        alert('エラーが発生しました: ' + error.message);
+                    const title = `過去問演習: ${elements.selectYear.options[elements.selectYear.selectedIndex].text} ${elements.selectSeason.options[elements.selectSeason.selectedIndex].text} ${elements.selectPeriod.options[elements.selectPeriod.selectedIndex].text}`;
+                    elements.scoreForm.querySelector('[name="exercise_text"]').value = title;
+                    if (elements.pastPaperIdHidden) {
+                        elements.pastPaperIdHidden.value = pdfId;
                     }
-                });
+
+                    elements.answerCard.classList.remove('hidden');
+                    elements.exerciseCard.classList.add('hidden');
+
+                    // 学習ログを記録
+                    const recordData = new FormData();
+                    const token = document.querySelector('input[name="_token"]')?.value || '';
+                    recordData.append('_token', token);
+                    recordData.append('past_paper_id', pdfId);
+                    recordData.append('exercise_text', title);
+                    recordData.append('selected_questions', JSON.stringify(allQuestions));
+
+                    const recordRes = await api.post('/exercise/record-generation', recordData);
+                    if (recordRes.log_id) {
+                        window.RissApp.currentLogId = recordRes.log_id;
+                    }
+                } else {
+                    alert('問題データの取得に失敗しました');
+                }
 
             } catch (error) {
                 console.error(error);

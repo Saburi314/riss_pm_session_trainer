@@ -57,10 +57,10 @@
         </div>
 
         <div class="row mt-16 pb-24 border-bottom">
-            <div class="flex-1 display-flex-wrap-gap-8">
+            <div class="flex-1 display-flex-wrap-gap-8" style="justify-content: center; align-items: center;">
                 <button id="btn-retake" class="secondary">この問題に再挑戦する</button>
                 <a href="{{ route('history.index') }}" class="nav-brand"
-                    style="font-size: 14px; margin-left: 16px; align-self: center;">履歴一覧に戻る</a>
+                    style="font-size: 14px; align-self: center;">履歴一覧に戻る</a>
             </div>
         </div>
 

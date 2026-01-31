@@ -15,7 +15,7 @@ class ExtractAnswersCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'answers:extract {--id= : PastPaper ID to process}';
+    protected $signature = 'answers:extract {--id= : PastPaper ID to process} {--all : Process all applicable papers}';
 
     /**
      * The console command description.
@@ -30,6 +30,12 @@ class ExtractAnswersCommand extends Command
     public function handle(PdfAnalysisService $analysisService)
     {
         $id = $this->option('id');
+        $all = $this->option('all');
+
+        if (!$id && !$all) {
+            $this->error('Please specify --id or --all');
+            return 1;
+        }
 
         $query = PastPaper::query()
             ->whereIn('doc_type', ['answer', 'commentary'])

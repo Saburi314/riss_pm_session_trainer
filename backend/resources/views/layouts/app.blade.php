@@ -8,7 +8,7 @@
     {{-- 描画ライブラリ --}}
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    @vite(['resources/css/exercise.css', 'resources/js/exercise.js'])
+    @vite(['resources/css/app.css', 'resources/css/exercise.css', 'resources/js/exercise.js'])
     @stack('styles')
 </head>
 
@@ -34,7 +34,7 @@
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container @yield('container_class')">
         @if (session('status'))
             <div class="card success-card">
                 {{ session('status') }}

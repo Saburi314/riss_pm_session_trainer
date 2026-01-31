@@ -69,7 +69,13 @@ class ExerciseController extends Controller
 
         return response()->file($path, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $pdf->filename . '"'
+            'Content-Disposition' => 'inline; filename="' . $pdf->filename . '"',
+            'X-Content-Type-Options' => 'nosniff',
+            'X-Frame-Options' => 'SAMEORIGIN',
+            'Content-Security-Policy' => "frame-ancestors 'self'",
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
         ]);
     }
 
@@ -177,7 +183,7 @@ class ExerciseController extends Controller
 
         $category = $request->input('category');
         $subcategory = $request->input('subcategory');
-        $pastPaperId = $request->input('past_paper_id');
+        $pastPaperId = $request->input('past_paper_id') ?? $request->input('pdf_file_id');
         $questionNumber = $request->input('question_number');
         $exerciseType = $pastPaperId ? 'past_paper' : 'ai_generated';
 
@@ -208,22 +214,18 @@ class ExerciseController extends Controller
         $userAnswer = $request->input('user_answer', '');
 
         // 過去問モードの場合の追加情報
-        $pastPaperId = $request->input('past_paper_id');
+        $pastPaperId = $request->input('past_paper_id') ?? $request->input('pdf_file_id');
         $questionNumber = $request->input('question_number');
         $answerDetails = $request->input('answer_details'); // array (casted from JSON)
 
         // 模範解答を取得（過去問モードのみ）
         $sampleAnswers = [];
-        if ($pastPaperId && $questionNumber) {
+        if ($pastPaperId) {
             $pdf = \App\Models\PastPaper::find($pastPaperId);
             if ($pdf) {
-                // PastPaperAnswerのdata JSON内に question_number がある形式を想定
+                // 試験問題に紐づくすべての解答データを渡す（複数問・タブ形式対応）
                 $sampleAnswers = \App\Models\PastPaperAnswer::where('past_paper_id', $pdf->id)
                     ->get()
-                    ->filter(function ($a) use ($questionNumber) {
-                        return ($a->data['question_number'] ?? null) == $questionNumber;
-                    })
-                    ->values()
                     ->toArray();
             }
         }
