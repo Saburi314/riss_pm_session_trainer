@@ -31,7 +31,7 @@ class ExerciseController extends Controller
             $log = StudyLog::find($retakeLogId);
             if ($log && $log->user_id === Auth::id()) {
                 $answerData = $log->answer_data;
-                $exerciseText = $answerData['exercise_text'] ?? null;
+                $exerciseText = $log->exercise_text;
                 $category = $log->subcategory?->category?->code;
                 $subcategory = $log->subcategory?->code;
             }
